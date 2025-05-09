@@ -77,6 +77,9 @@ def run_script(
         while not event.is_set():
             try:  # ugly fix: 避免ssh命令超时后，这里疯狂报错
                 line = stdout.readline()
+                if not line:
+                    time.sleep(0.2)
+                    continue
                 if isinstance(line, bytes):
                     queue_stdout.put(line.decode(encoding, errors='ignore'))
                 else:
@@ -88,6 +91,9 @@ def run_script(
         while not event.is_set():
             try:  # ugly fix: 避免ssh命令超时后，这里疯狂报错
                 line = stderr.readline()
+                if not line:
+                    time.sleep(0.2)
+                    continue
                 if isinstance(line, bytes):
                     queue_stderr.put(line.decode(encoding, errors='ignore'))
                 else:
@@ -131,8 +137,9 @@ def run_script(
         thread_stderr.start()
         order = 0
         is_timeout = False
+        time.sleep(1)
         for i in count():
-            if i % 2 == 0:  # 1秒读一次数据
+            if i % 4 == 0:  # 2秒读一次数据
                 output_list = []
                 output_list.extend(queue_stdout.get() for _ in range(queue_stdout.qsize()))
                 output_list.extend(queue_stderr.get() for _ in range(queue_stderr.qsize()))
@@ -144,7 +151,7 @@ def run_script(
                         start_datetime=start_datetime,
                     )
                     output_full += output
-                    if extract_names and (search_sops_var := re.search(r'<SOPS_VAR>.+</SOPS_VAR>', output_full)):
+                    if extract_names and (search_sops_var := re.search(r'<SOPS_VAR>.+</SOPS_VAR>', output_full, flags=re.DOTALL)):
                         # 发现了<SOPS_VAR>标签，进行提取
                         insert_apscheduler_extract_value(
                             job_id=job_id,
@@ -175,7 +182,7 @@ def run_script(
                 start_datetime=start_datetime,
             )
             output_full += output
-            if extract_names and (search_sops_var := re.search(r'<SOPS_VAR>.+</SOPS_VAR>', output_full)):
+            if extract_names and (search_sops_var := re.search(r'<SOPS_VAR>.+</SOPS_VAR>', output_full, flags=re.DOTALL)):
                 # 发现了<SOPS_VAR>标签，进行提取
                 insert_apscheduler_extract_value(
                     job_id=job_id,
@@ -230,11 +237,16 @@ def run_script(
         except Exception as e:
             pass
     elif type == 'ssh':
+        tempdir = tempfile.gettempdir()
+        sshscript_cache = os.path.join(tempdir, 'dashgo_sshscript_cache')
+        if not os.path.exists(sshscript_cache):
+            os.makedirs(sshscript_cache)
         # ssh默认都认为是linux系统
         with tempfile.NamedTemporaryFile(
             delete=False,
             mode='w',
-            dir=tempfile.gettempdir(),
+            newline='\n',
+            dir=sshscript_cache,
             prefix=f'dashgo_{datetime.now().timestamp()}',
             suffix=suffix,
             encoding='utf-8',
@@ -264,8 +276,9 @@ def run_script(
                 thread_stdout.start()
                 thread_stderr.start()
                 order = 0
+                time.sleep(1)
                 for i in count():
-                    if i % 2 == 0:  # 等待1秒钟读取一次日志
+                    if i % 4 == 0:  # 等待2秒钟读取一次日志
                         output_list = []
                         output_list.extend(queue_stdout.get() for _ in range(queue_stdout.qsize()))
                         output_list.extend(queue_stderr.get() for _ in range(queue_stderr.qsize()))
@@ -277,7 +290,7 @@ def run_script(
                                 start_datetime=start_datetime,
                             )
                             output_full += output
-                            if extract_names and (search_sops_var := re.search(r'<SOPS_VAR>.+</SOPS_VAR>', output_full)):
+                            if extract_names and (search_sops_var := re.search(r'<SOPS_VAR>.+</SOPS_VAR>', output_full, flags=re.DOTALL)):
                                 # 发现了<SOPS_VAR>标签，进行提取
                                 insert_apscheduler_extract_value(
                                     job_id=job_id,
@@ -304,7 +317,7 @@ def run_script(
                         start_datetime=start_datetime,
                     )
                     output_full += output
-                    if extract_names and (search_sops_var := re.search(r'<SOPS_VAR>.+</SOPS_VAR>', output_full)):
+                    if extract_names and (search_sops_var := re.search(r'<SOPS_VAR>.+</SOPS_VAR>', output_full, flags=re.DOTALL)):
                         # 发现了<SOPS_VAR>标签，进行提取
                         insert_apscheduler_extract_value(
                             job_id=job_id,
