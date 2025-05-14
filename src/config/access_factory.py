@@ -2,7 +2,7 @@
 from dash_view.application.access_ import role_mgmt, user_mgmt, group_auth, group_mgmt
 from dash_view.application.dashboard_ import workbench, monitor
 from dash_view.application.person_ import personal_info
-from dash_view.application.message_ import announcement
+from dash_view.application.message_ import announcement, comment
 from dash_view.application.task_ import task_mgmt, task_log
 from dash_view.application.setting_ import notify_api, listen_api
 
@@ -29,6 +29,7 @@ class AccessFactory:
         monitor,
         personal_info,
         announcement,
+        comment,
         task_mgmt,
         task_log,
         notify_api,
@@ -61,6 +62,7 @@ class AccessFactory:
         '角色管理-页面',
         '团队管理-页面',
         '公告管理-页面',
+        '评论管理-页面',
         '任务管理-页面',
         '任务日志-页面',
         '通知接口-页面',

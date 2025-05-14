@@ -269,6 +269,12 @@
         "公告管理-页面": {
             "en-us": "Announcement Mgmt Show"
         },
+        "评论管理": {
+            "en-us": "Comment Mgmt"
+        },
+        "评论管理-页面": {
+            "en-us": "Comment Mgmt Show"
+        },
         "任务中心": {
             "en-us": "Task Center"
         },
