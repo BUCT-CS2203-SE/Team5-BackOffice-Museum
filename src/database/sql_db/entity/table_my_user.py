@@ -27,6 +27,7 @@ class MyUser(MyBaseModel):
     class Meta:
         table_name = 'user_info'  # 数据库表名
 class Admin(MyBaseModel):
+# 管理员表
     admin_id=IntegerField(primary_key=True, help_text='主键，管理员唯一标识')
     user_id=IntegerField(help_text='用户id',help_text='用户id')
     nickname= CharField(max_length=255, help_text='昵称')
