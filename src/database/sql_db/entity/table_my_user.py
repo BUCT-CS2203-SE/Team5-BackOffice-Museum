@@ -26,3 +26,17 @@ class MyUser(MyBaseModel):
     spare= CharField(max_length=255, null=True, default='NULL', help_text='备用字段')
     class Meta:
         table_name = 'user_info'  # 数据库表名
+class Admin(MyBaseModel):
+    admin_id=IntegerField(primary_key=True, help_text='主键，管理员唯一标识')
+    user_id=IntegerField(help_text='用户id',help_text='用户id')
+    nickname= CharField(max_length=255, help_text='昵称')
+# 1	admin_id 主键	int(11)			否	无	主键，管理员唯一标识	AUTO_INCREME
+class MyAppUser(MyBaseModel):
+# APP用户表
+    id= IntegerField(primary_key=True, help_text='主键，用户唯一标识')
+    account= CharField(max_length=255, help_text='账号')
+    password= CharField(max_length=255, help_text='密码')
+    email= CharField(max_length=255, help_text='邮箱')
+    isAdmin=IntegerField(null=True, default=0, help_text='是否是管理员(0:默认 1:管理员)')
+    isFrozen=IntegerField(null=True, default=0, help_text='是否冻结(0:默认 1:冻结)')
+    avatar= CharField(max_length=255, null=True, default='https://tse1-mm.cn.bing.net/th/id/OIP-C.3dLZ4NXxxg03pzV30ITasAAAAA?rs=1&pid=ImgDetMain', help_text='头像地址')
