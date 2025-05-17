@@ -34,7 +34,7 @@ class Admin(BaseModel):
 # 管理员表
     admin_id=IntegerField(primary_key=True, help_text='主键，管理员唯一标识')
     user_id=IntegerField(help_text='用户id')
-    nickname= CharField(max_length=255, help_text='昵称')
+    admin_nick_name= CharField(max_length=255, help_text='昵称')
 
     class Meta:
         table_name='admin_info'
