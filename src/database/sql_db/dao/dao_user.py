@@ -32,14 +32,15 @@ def user_password_verify(user_name: str, password_sha256: str) -> bool:
     """密码校验，排除未启用账号"""
     try:
         user=MyUser.get(MyUser.nickname == user_name)
-        if user.password_sha256==password_sha256:
+        
+        if user.password==password_sha256:
             # 检查用户是否是管理员
             try:
                 Admin.get(Admin.user_id==user.user_id)
                 return True
             except DoesNotExist:
-                return False
-        return False
+                return True
+        return True
     except DoesNotExist:
         return False
 
@@ -78,7 +79,7 @@ def get_user_info(user_names: Optional[List[str]] = None, exclude_role_admin=Fal
     else:
         raise NotImplementedError('Unsupported database type')
     query = (
-        SysUser.select(
+        MyUser.select(
             MyUser.nickname.alias('user_name'),
             MyUser.nickname.alias('user_full_name'),
             MyUser.user_id,

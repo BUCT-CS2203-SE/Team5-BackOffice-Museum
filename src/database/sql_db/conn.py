@@ -40,14 +40,13 @@ def db():
 # 判断是否存在SysUser表，如不存在则初始化库
 def create_rds_table():
     db_instance = db()
-    from .entity.table_user import SysUser, SysRoleAccessMeta, SysUserRole, SysGroupUser, SysRole, SysGroupRole, SysGroup
+    from .entity.table_user import SysUser, SysRoleAccessMeta, SysUserRole, SysGroupUser, SysRole, SysGroupRole, SysGroup,MyUser,Admin
     from .entity.table_announcement import SysAnnouncement
     from .entity.table_oauth2 import OAuth2Client, OAuth2AuthorizationCode, OAuth2Token
     from .entity.table_apscheduler import SysApschedulerResults, SysApschedulerExtractValue, SysApschedulerRunning
     from .entity.table_notify_api import SysNotifyApi
     from .entity.table_listen_api import SysListenApi
     from .entity.table_listen_task import ApschedulerJobsActiveListen
-    from .entity.table_my_user import MyUser
     db_instance.create_tables(
         [
             SysUser,
@@ -68,6 +67,7 @@ def create_rds_table():
             SysListenApi,
             ApschedulerJobsActiveListen,
             MyUser,
+            Admin,
         ],
         safe=True,
     )
