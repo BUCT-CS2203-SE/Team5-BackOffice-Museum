@@ -8,8 +8,22 @@ from dash_components import Card
 import feffery_antd_components as fac
 from common.utilities.util_logger import Log
 from i18n import t__dashboard
-
-
+from database.sql_db.entity.table_antique_order import SysAntique
+def __query__(spare_id):
+    query = (
+        SysAntique.select(SysAntique.relic_id, SysAntique.relic_name, SysAntique.relic_type, SysAntique.relic_time,
+                          SysAntique.relic_loc, SysAntique.relic_intro,SysAntique.spare_id)
+        .where(SysAntique.spare_id == spare_id)
+        .order_by(SysAntique.relic_id.desc())
+    )
+    return query
+def get_parameter_for_antique_graph():
+    have_access=len(__query__(1))
+    be_accessing=len(__query__(-1))
+    be_rejected=len(__query__(0))
+    return have_access, be_accessing, be_rejected
+x,y,z=get_parameter_for_antique_graph()
+print(x,y,z)
 # 二级菜单的标题、图标和显示顺序
 title = '工作台'
 icon = None
@@ -152,21 +166,19 @@ def render_content(menu_access: MenuAccess, **kwargs):
                     ),
                     fuc.FefferyGridItem(
                         chart_block(
-                            title='饼图示例',
+                            title='文物审核信息图示',
                             chart=fact.AntdPie(
                                 data=[
-                                    {
-                                        'type': f'item{i}',
-                                        'x': random.randint(50, 100),
-                                    }
-                                    for i in range(1, 6)
+                                    {'status':'已通过','x':x},
+                                    {'status':'待审核','x':y},
+                                    {'status':'已驳回','x':z},
                                 ],
-                                colorField='type',
+                                colorField='status',
                                 angleField='x',
                                 radius=0.9,
                             ),
                         ),
-                        key='饼图示例',
+                        key='文物审核情况图',
                     ),
                     fuc.FefferyGridItem(
                         chart_block(
@@ -246,7 +258,7 @@ def render_content(menu_access: MenuAccess, **kwargs):
                     dict(i='面积图示例', x=1, y=0, w=1, h=2),
                     dict(i='柱状图示例', x=2, y=0, w=1, h=2),
                     dict(i='条形图示例', x=0, y=1, w=1, h=2),
-                    dict(i='饼图示例', x=1, y=1, w=1, h=2),
+                    dict(i='文物审核信息图示', x=1, y=1, w=1, h=2),
                     dict(i='双轴图示例', x=2, y=1, w=1, h=2),
                     dict(i='迷你面积图示例', x=0, y=2, w=1, h=1),
                     dict(i='进度条图示例', x=1, y=2, w=1, h=1),
