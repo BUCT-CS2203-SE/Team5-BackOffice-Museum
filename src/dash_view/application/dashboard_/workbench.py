@@ -8,19 +8,44 @@ from dash_components import Card
 import feffery_antd_components as fac
 from common.utilities.util_logger import Log
 from i18n import t__dashboard
+from datetime import datetime, timedelta
+from peewee import fn
+from database.sql_db.dao import dao_comment
+from database.sql_db.dao import dao_announcement
+from database.sql_db.dao.dao_comment import get_daily_comment_counts
 
-
+stats = dao_comment.get_comment_status_stats()
 # 二级菜单的标题、图标和显示顺序
 title = '工作台'
 icon = None
 order = 1
 logger = Log.get_logger(__name__)
-
+today = datetime.now()
 access_metas = ('工作台-页面',)
 
-
 def chart_block(title, chart):
-    """示例自定义组件，返回仪表盘区块"""
+    return fac.AntdFlex(
+        [
+            fac.AntdText(
+                title,
+                style={
+                    'borderLeft': '3px solid #1890ff',
+                    'paddingLeft': '8px',
+                    'fontSize': '15px',
+                    'fontWeight': '500'
+                }
+            ),
+            chart,
+        ],
+        vertical=True,
+        gap=8,
+        style={
+            'height': 'calc(100% - 20px)',
+            'padding': '8px'
+        }
+    )
+#chartblock似乎有点bug，不能运行得改成最开始的那个函数
+"""def chart_block(title, chart):
 
     return fac.AntdFlex(
         [
@@ -33,9 +58,7 @@ def chart_block(title, chart):
         vertical=True,
         gap=8,
         style=style(height='calc(100% - 20px)'),
-    )
-
-
+    )"""
 def render_content(menu_access: MenuAccess, **kwargs):
     return fac.AntdSpace(
         [
@@ -52,36 +75,36 @@ def render_content(menu_access: MenuAccess, **kwargs):
                         ),
                         fac.AntdText(t__dashboard('你好，')),
                         fac.AntdText(menu_access.user_info.user_full_name, id='workbench-user-full-name'),
+                        fac.AntdText(t__dashboard('!')),
                     ]
                 )
             ),
             fuc.FefferyGrid(
                 [
-                    fuc.FefferyGridItem(
+                fuc.FefferyGridItem(
                         chart_block(
-                            title='折线图示例',
+                            title='评论量',
                             chart=fact.AntdLine(
-                                data=[
-                                    {
-                                        'date': f'2020-0{i}',
-                                        'y': random.randint(50, 100),
-                                    }
-                                    for i in range(1, 10)
-                                ],
+                                data=get_daily_comment_counts(10),
                                 xField='date',
-                                yField='y',
+                                yField='count',
                                 slider={},
+                                yAxis={
+                                    'title': {
+                                        'text': '评论量'
+                                    }
+                                }
                             ),
                         ),
-                        key='折线图示例',
+                        key='评论量留存',
                     ),
                     fuc.FefferyGridItem(
                         chart_block(
-                            title='面积图示例',
+                            title='访客量',
                             chart=fact.AntdArea(
                                 data=[
                                     {
-                                        'date': f'2020-0{i}',
+                                        'date':(today - timedelta(days=9-i)).strftime('%Y-%m-%d'),
                                         'y': random.randint(50, 100),
                                     }
                                     for i in range(1, 10)
@@ -91,7 +114,7 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                 areaStyle={'fill': 'l(270) 0:#ffffff 0.5:#7ec2f3 1:#1890ff'},
                             ),
                         ),
-                        key='面积图示例',
+                        key='访客量留存',
                     ),
                     fuc.FefferyGridItem(
                         chart_block(
@@ -112,61 +135,44 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                 isGroup=True,
                             ),
                         ),
-                        key='柱状图示例',
+                        key='柱状图',
                     ),
                     fuc.FefferyGridItem(
                         chart_block(
-                            title='条形图示例',
+                            title='公告',
                             chart=fact.AntdBar(
                                 data=[
                                     {
-                                        'year': '1951 年',
-                                        'value': 38,
-                                    },
-                                    {
-                                        'year': '1952 年',
-                                        'value': 52,
-                                    },
-                                    {
-                                        'year': '1956 年',
-                                        'value': 61,
-                                    },
-                                    {
-                                        'year': '1957 年',
-                                        'value': 145,
-                                    },
-                                    {
-                                        'year': '1958 年',
-                                        'value': 48,
-                                    },
+                                        'date': (today - timedelta(days=9-i)).strftime('%Y-%m-%d'),
+                                        'y': random.randint(0, 100),
+                                    }
+                                    for i in range(1, 7)
                                 ],
-                                xField='value',
-                                yField='year',
-                                seriesField='year',
+                                xField='count',
+                                yField='date',
+                                seriesField='date',
                                 legend={
                                     'position': 'top-left',
                                 },
                             ),
                         ),
-                        key='条形图示例',
+                        key='条形图',
                     ),
                     fuc.FefferyGridItem(
                         chart_block(
-                            title='饼图示例',
+                            title='评论状态分布',
                             chart=fact.AntdPie(
                                 data=[
-                                    {
-                                        'type': f'item{i}',
-                                        'x': random.randint(50, 100),
-                                    }
-                                    for i in range(1, 6)
+                                    {'type': '待审核', 'value': stats['待审核']},
+                                    {'type': '已通过', 'value': stats['已通过']},
+                                    {'type': '已驳回', 'value': stats['已驳回']}
                                 ],
                                 colorField='type',
-                                angleField='x',
+                                angleField='value',
                                 radius=0.9,
                             ),
                         ),
-                        key='饼图示例',
+                        key='评论状态分布',
                     ),
                     fuc.FefferyGridItem(
                         chart_block(
@@ -198,7 +204,7 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                 ],
                             ),
                         ),
-                        key='双轴图示例',
+                        key='双轴图',
                     ),
                     fuc.FefferyGridItem(
                         chart_block(
@@ -216,7 +222,7 @@ def render_content(menu_access: MenuAccess, **kwargs):
                             title='进度条图示例',
                             chart=fact.AntdProgress(percent=0.7, barWidthRatio=0.2),
                         ),
-                        key='进度条图示例',
+                        key='进度条图',
                     ),
                     fuc.FefferyGridItem(
                         chart_block(
@@ -238,19 +244,19 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                 },
                             ),
                         ),
-                        key='进度环图示例',
+                        key='进度环图',
                     ),
                 ],
                 layouts=[
-                    dict(i='折线图示例', x=0, y=0, w=1, h=2),
-                    dict(i='面积图示例', x=1, y=0, w=1, h=2),
-                    dict(i='柱状图示例', x=2, y=0, w=1, h=2),
-                    dict(i='条形图示例', x=0, y=1, w=1, h=2),
-                    dict(i='饼图示例', x=1, y=1, w=1, h=2),
-                    dict(i='双轴图示例', x=2, y=1, w=1, h=2),
-                    dict(i='迷你面积图示例', x=0, y=2, w=1, h=1),
-                    dict(i='进度条图示例', x=1, y=2, w=1, h=1),
-                    dict(i='进度环图示例', x=2, y=2, w=1, h=2),
+                    dict(i='评论量留存', x=0, y=0, w=1, h=2),
+                    dict(i='访客量留存', x=1, y=0, w=1, h=2),
+                    dict(i='柱状图', x=2, y=0, w=1, h=2),
+                    dict(i='条形图', x=0, y=1, w=1, h=2),
+                    dict(i='评论状态分布', x=1, y=1, w=1, h=2),
+                    dict(i='双轴图', x=2, y=1, w=1, h=2),
+                    dict(i='迷你面积图', x=0, y=2, w=1, h=1),
+                    dict(i='进度条图', x=1, y=2, w=1, h=1),
+                    dict(i='进度环图', x=2, y=2, w=1, h=2),
                 ],
                 cols=3,
                 rowHeight=150,
