@@ -1,5 +1,5 @@
 # 本应用的权限工厂，此处手动导入应用模块 - 内置应用，请勿修改
-from dash_view.application.access_ import role_mgmt, user_mgmt, group_auth, group_mgmt
+from dash_view.application.access_ import role_mgmt, user_mgmt, group_auth, group_mgmt,app_mgmt
 from dash_view.application.dashboard_ import workbench, monitor
 from dash_view.application.person_ import personal_info
 from dash_view.application.message_ import announcement, comment
@@ -25,6 +25,7 @@ class AccessFactory:
         user_mgmt,
         group_auth,
         group_mgmt,
+        app_mgmt,
         workbench,
         monitor,
         personal_info,
@@ -61,6 +62,7 @@ class AccessFactory:
         '用户管理-页面',
         '角色管理-页面',
         '团队管理-页面',
+        'APP用户管理-页面',
         '公告管理-页面',
         '评论管理-页面',
         '任务管理-页面',

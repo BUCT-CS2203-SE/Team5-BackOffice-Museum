@@ -45,6 +45,185 @@ def get_all_access_meta_for_setup_check() -> List[str]:
     return [role.access_meta for role in query]
 
 
+### APP用户信息管理
+@dataclass
+class APPUserInfo:
+    user_id:int
+    account:str
+    password:str
+    email:str
+    is_admin:int
+    is_frozen:int
+    avatar:str
+# 在现有导入之后添加
+
+def get_app_user_info(accounts: Optional[List[str]] = None, exclude_admin=False, exclude_frozen=True) -> List[APPUserInfo]:
+    """获取APP用户信息对象
+    
+    参数:
+        accounts: 可选，要查询的账号列表，为None时查询所有账号
+        exclude_admin: 是否排除管理员账号
+        exclude_frozen: 是否排除被冻结的账号
+        
+    返回:
+        APP用户信息列表
+    """
+    query = MyAppUser.select()
+    
+    # 应用过滤条件
+    if accounts is not None:
+        query = query.where(MyAppUser.account.in_(accounts))
+    if exclude_admin:
+        query = query.where(MyAppUser.isAdmin != 1)
+    if exclude_frozen:
+        query = query.where(MyAppUser.isFrozen != 1)
+    
+    app_users = []
+    for user in query:
+        app_user_info = APPUserInfo(
+            user_id=user.id,
+            account=user.account,
+            password=user.password,
+            email=user.email,
+            is_admin=user.isAdmin,
+            is_frozen=user.isFrozen,
+            avatar=user.avatar
+        )
+        app_users.append(app_user_info)
+    
+    return app_users
+
+def app_user_password_verify(account: str, password: str) -> bool:
+    """验证APP用户密码"""
+    try:
+        user = MyAppUser.get(MyAppUser.account == account)
+        return user.password == password
+    except DoesNotExist:
+        return False
+
+def exists_app_user_account(account: str) -> bool:
+    """检查APP用户账号是否已存在"""
+    try:
+        MyAppUser.get(MyAppUser.account == account)
+        return True
+    except DoesNotExist:
+        return False
+
+def create_app_user(account: str, password: str, email: str, is_admin: int = 0, is_frozen: int = 0, avatar: str = None) -> bool:
+    """创建新的APP用户"""
+    user_name_op = get_menu_access(only_get_user_name=True)
+    database = db()
+    
+    with database.atomic() as txn:
+        try:
+            MyAppUser.create(
+                account=account,
+                password=password,
+                email=email,
+                isAdmin=is_admin,
+                isFrozen=is_frozen,
+                avatar=avatar or 'https://tse1-mm.cn.bing.net/th/id/OIP-C.3dLZ4NXxxg03pzV30ITasAAAAA?rs=1&pid=ImgDetMain'
+            )
+        except IntegrityError as e:
+            logger.warning(f'用户{user_name_op}添加APP用户{account}时，出现异常: {e}', exc_info=True)
+            txn.rollback()
+            return False
+        else:
+            txn.commit()
+            return True
+
+def update_app_user(user_id: int, account: str = None, password: str = None, email: str = None, 
+                   is_admin: int = None, is_frozen: int = None, avatar: str = None) -> bool:
+    """更新APP用户信息"""
+    user_name_op = get_menu_access(only_get_user_name=True)
+    database = db()
+    
+    with database.atomic() as txn:
+        try:
+            user = MyAppUser.get(MyAppUser.id == user_id)
+            
+            if account is not None:
+                user.account = account
+            if password:
+                user.password = password
+            if email is not None:
+                user.email = email
+            if is_admin is not None:
+                user.isAdmin = is_admin
+            if is_frozen is not None:
+                user.isFrozen = is_frozen
+            if avatar:
+                user.avatar = avatar
+            
+            user.save()
+        except DoesNotExist:
+            logger.warning(f'APP用户ID {user_id} 不存在，无法更新')
+            txn.rollback()
+            return False
+        except Exception as e:
+            logger.warning(f'用户{user_name_op}更新APP用户ID {user_id} 时，出现异常: {e}', exc_info=True)
+            txn.rollback()
+            return False
+        else:
+            txn.commit()
+            return True
+
+def delete_app_user(user_id: int) -> bool:
+    """删除APP用户"""
+    user_name_op = get_menu_access(only_get_user_name=True)
+    database = db()
+    
+    with database.atomic() as txn:
+        try:
+            user = MyAppUser.get(MyAppUser.id == user_id)
+            user.delete_instance()
+        except DoesNotExist:
+            logger.warning(f'APP用户ID {user_id} 不存在，无法删除')
+            return False
+        except Exception as e:
+            logger.warning(f'用户{user_name_op}删除APP用户ID {user_id} 时，出现异常: {e}', exc_info=True)
+            txn.rollback()
+            return False
+        else:
+            txn.commit()
+            return True
+
+def update_app_user_account(user_id: int, account: str) -> bool:
+    """更新APP用户账号"""
+    return update_app_user(user_id, account=account)
+
+def update_app_user_email(user_id: int, email: str) -> bool:
+    """更新APP用户邮箱"""
+    return update_app_user(user_id, email=email)
+
+def update_app_user_password(user_id: int, password: str) -> bool:
+    """更新APP用户密码"""
+    return update_app_user(user_id, password=password)
+
+def update_app_user_status(user_id: int, is_admin: int = None, is_frozen: int = None) -> bool:
+    """更新APP用户状态（管理员状态和冻结状态）"""
+    return update_app_user(user_id, is_admin=is_admin, is_frozen=is_frozen)
+
+def update_app_user_avatar(user_id: int, avatar: str) -> bool:
+    """更新APP用户头像"""
+    return update_app_user(user_id, avatar=avatar)
+
+def get_app_user_by_id(user_id: int) -> Optional[APPUserInfo]:
+    """根据ID获取APP用户信息"""
+    try:
+        user = MyAppUser.get(MyAppUser.id == user_id)
+        return APPUserInfo(
+            user_id=user.id,
+            account=user.account,
+            password=user.password,
+            email=user.email,
+            is_admin=user.isAdmin,
+            is_frozen=user.isFrozen,
+            avatar=user.avatar
+        )
+    except DoesNotExist:
+        return None
+
 ########################### 用户
 @dataclass
 class UserInfo:
