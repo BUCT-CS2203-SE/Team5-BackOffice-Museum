@@ -4,23 +4,23 @@ import feffery_utils_components as fuc
 from common.utilities.util_logger import Log
 from dash import html
 from dash_components import Card
-import dash_callback.application.message_.comment_c  # noqa: F401
+import dash_callback.application.message_.post_info_c  # noqa: F401
 from i18n import t__notification, translator
 
 
 # 二级菜单的标题、图标和显示顺序
-title = '评论管理'
+title = '帖子管理'
 icon = None
 logger = Log.get_logger(__name__)
-order = 2
-access_metas = ('评论管理-页面',)
+order = 3
+access_metas = ('帖子管理-页面',)
 
 
 def render_content(menu_access: MenuAccess, **kwargs):
     return [
         fac.Fragment(
             [
-                fuc.FefferyTimeout(id='comment-init-timeout', delay=1),
+                fuc.FefferyTimeout(id='post-init-timeout', delay=1),
             ]
         ),
         fac.AntdSpace(
@@ -28,14 +28,14 @@ def render_content(menu_access: MenuAccess, **kwargs):
                 fac.AntdSpace(
                     [
                         fac.AntdSelect(
-                            id='comment-status-filter',
+                            id='post-status-filter',
                             options=[
                                 {'label': t__notification('待审核'), 'value': -1},
                                 {'label': t__notification('已驳回'), 'value': 0},
                                 {'label': t__notification('已通过'), 'value': 1},
                             ],
                             mode='multiple',
-                            placeholder=t__notification('请选择评论状态'),
+                            placeholder=t__notification('请选择帖子状态'),
                             style={'width': '200px'},
                         ),
                         fac.AntdPopconfirm(
@@ -44,7 +44,7 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                 type='primary',
                                 icon=fac.AntdIcon(icon='antd-check'),
                             ),
-                            id='comment-button-pass',
+                            id='post-button-pass',
                             title=t__notification('确认通过选中行吗？'),
                             locale=translator.get_current_locale(),
                         ),
@@ -55,7 +55,7 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                 danger=True,
                                 icon=fac.AntdIcon(icon='antd-close'),
                             ),
-                            id='comment-button-reject',
+                            id='post-button-reject',
                             title=t__notification('确认驳回选中行吗？'),
                             locale=translator.get_current_locale(),
                         ),
@@ -63,7 +63,7 @@ def render_content(menu_access: MenuAccess, **kwargs):
                 ),
                 Card(
                     html.Div(
-                        id='comment-table-container',
+                        id='post-table-container',
                         style={'width': '100%'},
                     ),
                     style={'width': '100%'},
