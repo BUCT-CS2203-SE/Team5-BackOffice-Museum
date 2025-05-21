@@ -70,6 +70,7 @@ def create_rds_table():
             Admin,
             Comments,
             
+            
         ],
         safe=True,
     )

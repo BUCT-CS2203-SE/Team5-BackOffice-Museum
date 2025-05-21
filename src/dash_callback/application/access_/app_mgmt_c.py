@@ -35,13 +35,13 @@ def update_delete_role(nClicksButton, clickedCustom: str):
         return [
             True,
             user_name,
-        ] + [dash.no_update] * 13
+        ] + [dash.no_update] * 12
     elif clickedCustom.startswith('update:'):
         # 获取 APP 用户信息
         app_users = dao_user.get_app_user_info([user_name])
         if not app_users:
             # 如果找不到用户，返回 no_update
-            return [dash.no_update] * 15
+            return [dash.no_update] * 14
         
         app_user = app_users[0]
         
@@ -52,8 +52,7 @@ def update_delete_role(nClicksButton, clickedCustom: str):
             app_user.email,  # 邮箱
             "",  # 电话号码 - APP 用户没有此字段，设为空
             not bool(app_user.is_frozen),  # 用户状态 - 未冻结 = 启用
-            app_user.is_admin == 1,  # 管理员状态
-            "0",  # 性别 - APP 用户没有此字段，使用默认值
+            False,  # 管理员状态是否只读
             "",  # 密码字段，更新时为空
             "",  # 备注 - APP 用户没有此字段，设为空
             [],  # 用户角色 - APP 用户没有角色，设为空列表
