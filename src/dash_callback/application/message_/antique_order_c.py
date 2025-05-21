@@ -1,3 +1,5 @@
+from opcode import hasarg
+
 from server import app
 from dash.dependencies import Input, Output, State
 import feffery_antd_components as fac
@@ -14,34 +16,46 @@ logger = Log.get_logger(__name__)
 
 def get_table_data(status_filter=None):
     from database.sql_db.dao import dao_antique_order
+    antiques=[]
     if status_filter is None or len(status_filter) == 0:
         antiques = dao_antique_order.get_antique_all()
+        #在这里添加条件
     else:
-        antiques = []
-        if -1 in status_filter:
-            antiques.extend(dao_antique_order.get_antique_audit())
-        if 0 in status_filter:
-            antiques.extend(dao_antique_order.get_antique_rejected())
-        if 1 in status_filter:
-            antiques.extend(dao_antique_order.get_antique_passed())
+        antiques=[]
+        if '绘画' in status_filter:
+            antiques.extend(dao_antique_order.get_antique_paint('绘画'))
+        if '纺织品' in status_filter:
+            antiques.extend(dao_antique_order.get_antique_paint('纺织品'))
+        if '装饰艺术' in status_filter:
+            antiques.extend(dao_antique_order.get_antique_paint('装饰艺术'))
+        if '金属艺术' in status_filter:
+            antiques.extend(dao_antique_order.get_antique_paint('金属艺术'))
+        if '印刷品和图纸' in status_filter:
+            antiques.extend(dao_antique_order.get_antique_paint('印刷品和图纸'))
+        if '书籍和手稿' in status_filter:
+            antiques.extend(dao_antique_order.get_antique_paint('书籍和手稿'))
+        if '玉石与石头' in status_filter:
+            antiques.extend(dao_antique_order.get_antique_paint('玉石与石头'))
+        if '雕塑' in status_filter:
+            antiques.extend(dao_antique_order.get_antique_paint('雕塑'))
     return [
         {
-            'id': antique.relic_id,
-            'relic_id': antique.relic_id,
-            'relic_name': antique.relic_name,
-            'relic_type': antique.relic_type,
-            'relic_time':antique.relic_time,
-            'relic_loc': antique.relic_loc,
-            'relic_intro':antique.relic_intro,
-            'spare_id': antique.spare_id,
-            'status_tag': {
-                'text': t__notification('待审核') if antique.spare_id == -1 else
-                t__notification('已驳回') if antique.spare_id == 0 else
-                t__notification('已通过'),
-                'status': 'warning' if antique.spare_id == -1 else
-                'error' if antique.spare_id == 0 else
-                'success'
+            'id': antique.id,
+            'Classifications':antique.Classifications,
+            'Artist':antique.Artist,
+            'Credit':antique.Credit,
+            'Description':antique.Description,
+            'Materials':antique.Materials,
+            'Dimensions':antique.Dimensions,
+            'Dynasty':antique.Dynasty,
+            'Title':antique.Title,
+            'ImgUrl':{
+                'src':antique.ImgUrl if hasattr(antique,'ImgUrl') else None,
+                'height': '200px',
+                'width': '200px',
+                'preview': False
             }
+
         }
         for antique in antiques
     ]
@@ -60,21 +74,25 @@ def init_table(timeoutCount, status_filter):
         fac.AntdTable(
             id='antique-table',
             columns=[
-                {'title': t__notification('文物ID'), 'dataIndex': 'relic_id', 'width': 'calc(100% / 8)'},
-                {'title': t__notification('名称'), 'dataIndex': 'relic_name', 'width': 'calc(100% / 8)'},
-                {'title': t__notification('年代'), 'dataIndex': 'relic_time', 'width': 'calc(100% / 8)'},
-                {'title': t__notification('简介'), 'dataIndex': 'relic_intro', 'width': 'calc(100% / 8)'},
-                {'title': t__notification('备用ID'), 'dataIndex': 'spare_id', 'width': 'calc(100% / 8)'},
-                {'title': t__notification('位置'), 'dataIndex': 'relic_loc', 'width': 'calc(100% / 8)'},
-                {'title': t__notification('类型'), 'dataIndex': 'relic_type', 'width': 'calc(100% / 8)'},
                 {
-                    'title': t__notification('状态'),
-                    'dataIndex': 'status_tag',
+                    'title': t__notification('图片'),
+                    'dataIndex': 'ImgUrl',
+                    'width': 'calc(100%  / 8)',
                     'renderOptions': {
-                        'renderType': 'status-badge'
-                    },
-                    'width': 'calc(100% / 8)'
+                        'renderType': 'image'
+                    }
                 },
+                {'title': t__notification('文物ID'), 'dataIndex': 'id', 'width': 'calc(100% / 20)'},
+                {'title': t__notification('种类'), 'dataIndex': 'Classifications', 'width': 'calc(100% / 20)'},
+                {'title': t__notification('作者'), 'dataIndex': 'Artist', 'width': 'calc(100% / 15)'},
+                {'title': t__notification('来源'), 'dataIndex': 'Credit', 'width': 'calc(100% / 15)'},
+                {'title': t__notification('描述'), 'dataIndex': 'Description', 'width': 'calc(100% / 4)'},
+                {'title': t__notification('材料'), 'dataIndex': 'Materials', 'width': 'calc(100% / 15)'},
+                {'title': t__notification('尺寸'), 'dataIndex': 'Dimensions', 'width': 'calc(100% / 4)'},
+                {'title': t__notification('朝代'), 'dataIndex': 'Dynasty', 'width': 'calc(100% / 8)'},
+                {'title': t__notification('标题'), 'dataIndex': 'Title', 'width': 'calc(100% / 4)'},
+
+
             ],
             rowSelectionType='checkbox',
             data=get_table_data(status_filter),
@@ -89,57 +107,4 @@ def init_table(timeoutCount, status_filter):
     ]
 
 
-@app.callback(
-    Output('antique-table', 'data', allow_duplicate=True),
-    Input('antique-button-pass', 'confirmCounts'),
-    [State('antique-table', 'selectedRows'),
-     State('antique-status-filter', 'value')],
-    prevent_initial_call=True,
-)
-def handle_batch_pass(confirmCounts, selectedRows, status_filter):
-    """批量通过评论"""
-    logger.info(f"批量通过文物，选中行：{selectedRows}")
-    if not selectedRows:
-        MessageManager.warning(content=t__notification('请先选择要通过的文物'))
-        return dash.no_update
 
-    from database.sql_db.dao import dao_antique_order
-    antique_ids = [row['id'] for row in selectedRows]
-
-    if dao_antique_order.batch_pass_antiques(antique_ids):
-        MessageManager.success(content=t__notification('选中文物通过成功'))
-        # 重置选中行
-        set_props('antique-table', {'selectedRows': []})
-        set_props('antique-table', {'selectedRowKeys': []})
-        return get_table_data(status_filter)
-    else:
-        MessageManager.error(content=t__notification('选中文物通过失败'))
-        return dash.no_update
-
-
-@app.callback(
-    Output('antique-table', 'data', allow_duplicate=True),
-    Input('antique-button-reject', 'confirmCounts'),
-    [State('antique-table', 'selectedRows'),
-     State('antique-status-filter', 'value')],
-    prevent_initial_call=True,
-)
-def handle_batch_reject(confirmCounts, selectedRows, status_filter):
-    """批量驳回评论"""
-    logger.info(f"批量驳回文物，选中行：{selectedRows}")
-    if not selectedRows:
-        MessageManager.warning(content=t__notification('请先选择要驳回的文物'))
-        return dash.no_update
-
-    from database.sql_db.dao import dao_antique_order
-    antique_ids = [row['id'] for row in selectedRows]
-
-    if dao_antique_order.batch_reject_antiques(antique_ids):
-        MessageManager.success(content=t__notification('选中评论驳回文物'))
-        # 重置选中行
-        set_props('antique-table', {'selectedRows': []})
-        set_props('antique-table', {'selectedRowKeys': []})
-        return get_table_data(status_filter)
-    else:
-        MessageManager.error(content=t__notification('选中文物驳回失败'))
-        return dash.no_update
