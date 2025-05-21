@@ -5,107 +5,86 @@ from typing import List
 from dataclasses import dataclass
 from database.sql_db.conn import db
 
-def __query__(spare_id):
+def __query__(type):
     query = (
-        SysAntique.select(SysAntique.relic_id, SysAntique.relic_name, SysAntique.relic_type, SysAntique.relic_time,
-                          SysAntique.relic_loc, SysAntique.relic_intro,SysAntique.spare_id)
-        .where(SysAntique.spare_id == spare_id)
-        .order_by(SysAntique.relic_id.desc())
+        SysAntique.select(SysAntique.id,SysAntique.Classifications , SysAntique.Artist, SysAntique.Credit,
+                          SysAntique.Description, SysAntique.Materials,SysAntique.Dimensions,SysAntique.Dynasty,SysAntique.Title)
+         .where(SysAntique.Classifications == type)
     )
     return query
 
 @dataclass
 class Antique:
-    relic_id: str
-    relic_name:str
-    relic_type:str
-    relic_time:str
-    relic_loc:str
-    relic_intro:str
-    spare_id:str
+    id: str
+    Classifications : str
+    Artist : str
+    Credit : str
+    Description : str
+    Materials : str
+    Dimensions : str
+    Dynasty : str
+    Title : str
+    ImgUrl : str
+    ImgPath : str
 
 def get_antique_all() -> List[Antique]:
     """获取所有文物内容"""
     query = (
-        SysAntique.select(SysAntique.relic_id, SysAntique.relic_name, SysAntique.relic_type, SysAntique.relic_time,
-                          SysAntique.relic_loc, SysAntique.relic_intro, SysAntique.spare_id)
-        .order_by(SysAntique.relic_id)
+        SysAntique.select(SysAntique.id, SysAntique.Classifications, SysAntique.Artist, SysAntique.Credit,
+                          SysAntique.Description, SysAntique.Materials, SysAntique.Dimensions, SysAntique.Dynasty,
+                          SysAntique.Title,SysAntique.ImgUrl,SysAntique.ImgPath)
     )
 
     antiques = []
     for antique in query.dicts():
         antiques.append(
             Antique(
-                relic_id=antique["relic_id"],
-                relic_name=antique["relic_name"],
-                relic_time=antique["relic_time"],
-                relic_intro=antique["relic_intro"],
-                spare_id=antique["spare_id"],
-                relic_loc=antique["relic_loc"],
-                relic_type=antique["relic_type"],
+                id=antique["id"],
+                Classifications=antique["Classifications"],
+                Artist=antique["Artist"],
+                Credit=antique["Credit"],
+                Description=antique["Description"],
+                Materials=antique["Materials"],
+                Dimensions=antique["Dimensions"],
+                Dynasty=antique["Dynasty"],
+                Title=antique["Title"],
+                ImgUrl = antique.get("ImgUrl", "") , # 如果没有 ImgUrl，就用空字符串
+                ImgPath=antique.get("ImgPath", "")  # 如果没有 ImgUrl，就用空字符串
             )
         )
     return antiques
 
-
-def get_antique_audit() -> List[Antique]:
-    """获取文物状态内容"""
-    query = __query__(-1)
+def get_antique_paint(type) -> List[Antique]:
+    """获取指定文物内容"""
+    #query =__query__("绘画")
+    query = (
+        SysAntique.select(SysAntique.id, SysAntique.Classifications, SysAntique.Artist, SysAntique.Credit,
+                          SysAntique.Description, SysAntique.Materials, SysAntique.Dimensions, SysAntique.Dynasty,
+                          SysAntique.Title)
+        .where(SysAntique.Classifications == type)
+    )
     antiques = []
     for antique in query.dicts():
         antiques.append(
             Antique(
-                relic_id=antique["relic_id"],
-                relic_name=antique["relic_name"],
-                relic_time=antique["relic_time"],
-                relic_intro=antique["relic_intro"],
-                spare_id=antique["spare_id"],
-                relic_loc=antique["relic_loc"],
-                relic_type=antique["relic_type"],
-
+                id=antique["id"],
+                Classifications=antique["Classifications"],
+                Artist=antique["Artist"],
+                Credit=antique["Credit"],
+                Description=antique["Description"],
+                Materials=antique["Materials"],
+                Dimensions=antique["Dimensions"],
+                Dynasty=antique["Dynasty"],
+                Title=antique["Title"],
+                ImgUrl=antique.get("ImgUrl", ""),  # 如果没有 ImgUrl，就用空字符串
+                ImgPath=antique.get("ImgPath", "")
             )
         )
     return antiques
 
 
-def get_antique_passed() -> List[Antique]:
-    """获取已通过的评论内容"""
-    query = __query__(1)
-    antiques = []
-    for antique in query.dicts():
-        antiques.append(
-            Antique(
-                relic_id=antique["relic_id"],
-                relic_name=antique["relic_name"],
-                relic_time=antique["relic_time"],
-                relic_intro=antique["relic_intro"],
-                spare_id=antique["spare_id"],
-                relic_loc=antique["relic_loc"],
-                relic_type=antique["relic_type"],
-            )
-        )
-    return antiques
 
-
-def get_antique_rejected() -> List[Antique]:
-    """获取已驳回的评论内容"""
-    query =__query__(0)
-    antiques = []
-    for antique in query.dicts():
-        antiques.append(
-            Antique(
-                relic_id=antique["relic_id"],
-                relic_name=antique["relic_name"],
-                relic_time=antique["relic_time"],
-                relic_intro=antique["relic_intro"],
-                spare_id=antique["spare_id"],
-                relic_loc=antique["relic_loc"],
-                relic_type=antique["relic_type"],
-            )
-        )
-    return antiques
-
-
+'''
 def pass_antique(relic_id: str) -> bool:
     """通过文物"""
     return SysAntique.update(spare_id=1).where(SysAntique.relic_id == relic_id).execute()
@@ -132,3 +111,4 @@ def batch_reject_antiques(relic_ids: List[str]) -> bool:
         return True
     except Exception:
         return False
+'''
