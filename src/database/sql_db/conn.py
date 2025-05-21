@@ -68,6 +68,8 @@ def create_rds_table():
             ApschedulerJobsActiveListen,
             MyUser,
             Admin,
+            Comments,
+            
         ],
         safe=True,
     )
