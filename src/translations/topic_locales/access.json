@@ -275,6 +275,12 @@
         "评论管理-页面": {
             "en-us": "Comment Mgmt Show"
         },
+        "帖子管理": {
+            "en-us": "Post Mgmt"
+        },
+        "帖子管理-页面": {
+            "en-us": "Post Mgmt Show"
+        },
         "任务中心": {
             "en-us": "Task Center"
         },

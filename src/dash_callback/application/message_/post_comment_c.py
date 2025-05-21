@@ -13,18 +13,18 @@ logger = Log.get_logger(__name__)
 
 
 def get_table_data(status_filter=None):
-    from database.sql_db.dao import dao_comment
+    from database.sql_db.dao import dao_post_comment
 
     if status_filter is None or len(status_filter) == 0:
-        comments = dao_comment.get_comment_all()
+        comments = dao_post_comment.get_comment_all()
     else:
         comments = []
         if -1 in status_filter:
-            comments.extend(dao_comment.get_comment_audit())
+            comments.extend(dao_post_comment.get_comment_audit())
         if 0 in status_filter:
-            comments.extend(dao_comment.get_comment_rejected())
+            comments.extend(dao_post_comment.get_comment_rejected())
         if 1 in status_filter:
-            comments.extend(dao_comment.get_comment_passed())
+            comments.extend(dao_post_comment.get_comment_passed())
 
     return [
         {
@@ -32,6 +32,12 @@ def get_table_data(status_filter=None):
             'content': comment.content,
             'create_datetime': comment.createTime,
             'create_by': comment.username,
+            'avatar': {
+                'src': comment.avatarUrl if hasattr(comment, 'avatarUrl') else None,
+                'height': '40px',
+                'width': '40px',
+                'preview': False
+            },
             'status': comment.status,
             'status_tag': {
                 'text': t__notification('待审核') if comment.status == -1 else 
@@ -59,16 +65,24 @@ def init_table(timeoutCount, status_filter):
         fac.AntdTable(
             id='comment-table',
             columns=[
-                {'title': t__notification('创建人'), 'dataIndex': 'create_by', 'width': 'calc(100% / 5)'},
-                {'title': t__notification('内容'), 'dataIndex': 'content', 'width': 'calc(100% * 2 / 5)'},
-                {'title': t__notification('发布时间'), 'dataIndex': 'create_datetime', 'width': 'calc(100% / 5)'},
+                {
+                    'title': t__notification('头像'),
+                    'dataIndex': 'avatar',
+                    'width': 'calc(100% / 8)',
+                    'renderOptions': {
+                        'renderType': 'image-avatar'
+                    }
+                },
+                {'title': t__notification('创建人'), 'dataIndex': 'create_by', 'width': 'calc(100% / 8)'},
+                {'title': t__notification('内容'), 'dataIndex': 'content', 'width': 'calc(100% * 3 / 8)'},
+                {'title': t__notification('发布时间'), 'dataIndex': 'create_datetime', 'width': 'calc(100% * 2 / 8)'},
                 {
                     'title': t__notification('状态'),
                     'dataIndex': 'status_tag',
                     'renderOptions': {
                         'renderType': 'status-badge'
                     },
-                    'width': 'calc(100% / 5)'
+                    'width': 'calc(100% / 8)'
                 },
             ],
             rowSelectionType='checkbox',
@@ -98,10 +112,10 @@ def handle_batch_pass(confirmCounts, selectedRows, status_filter):
         MessageManager.warning(content=t__notification('请先选择要通过的评论'))
         return dash.no_update
 
-    from database.sql_db.dao import dao_comment
+    from database.sql_db.dao import dao_post_comment
     comment_ids = [row['id'] for row in selectedRows]
     
-    if dao_comment.batch_pass_comments(comment_ids):
+    if dao_post_comment.batch_pass_comments(comment_ids):
         MessageManager.success(content=t__notification('选中评论通过成功'))
         # 重置选中行
         set_props('comment-table', {'selectedRows': []})
@@ -126,10 +140,10 @@ def handle_batch_reject(confirmCounts, selectedRows, status_filter):
         MessageManager.warning(content=t__notification('请先选择要驳回的评论'))
         return dash.no_update
 
-    from database.sql_db.dao import dao_comment
+    from database.sql_db.dao import dao_post_comment
     comment_ids = [row['id'] for row in selectedRows]
     
-    if dao_comment.batch_reject_comments(comment_ids):
+    if dao_post_comment.batch_reject_comments(comment_ids):
         MessageManager.success(content=t__notification('选中评论驳回成功'))
         # 重置选中行
         set_props('comment-table', {'selectedRows': []})

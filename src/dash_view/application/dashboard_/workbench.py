@@ -10,11 +10,11 @@ from common.utilities.util_logger import Log
 from i18n import t__dashboard
 from datetime import datetime, timedelta
 from peewee import fn
-from database.sql_db.dao import dao_comment
+from database.sql_db.dao import dao_post_comment
 from database.sql_db.dao import dao_announcement
-from database.sql_db.dao.dao_comment import get_daily_comment_counts
+from database.sql_db.dao.dao_post_comment import get_daily_comment_counts
 
-stats = dao_comment.get_comment_status_stats()
+stats = dao_post_comment.get_comment_status_stats()
 # 二级菜单的标题、图标和显示顺序
 title = '工作台'
 icon = None
