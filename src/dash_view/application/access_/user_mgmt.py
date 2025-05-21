@@ -39,13 +39,9 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                 {'title': t__access('全名'), 'dataIndex': 'user_full_name'},
                                 {'title': t__access('用户状态'), 'dataIndex': 'user_status', 'renderOptions': {'renderType': 'tags'}},
                                 {'title': t__access('用户描述'), 'dataIndex': 'user_remark'},
-                                {'title': t__access('性别'), 'dataIndex': 'user_sex'},
+                                {'title': t__access('性别'), 'dataIndex': 'user_sex_display'},
                                 {'title': t__access('邮箱'), 'dataIndex': 'user_email'},
                                 {'title': t__access('电话号码'), 'dataIndex': 'phone_number'},
-                                {'title': t__access('更新时间'), 'dataIndex': 'update_datetime'},
-                                {'title': t__access('更新人'), 'dataIndex': 'update_by'},
-                                {'title': t__access('创建时间'), 'dataIndex': 'create_datetime'},
-                                {'title': t__access('创建人'), 'dataIndex': 'create_by'},
                                 {'title': t__default('操作'), 'dataIndex': 'operation', 'renderOptions': {'renderType': 'button'}},
                             ],
                             data=[
@@ -53,10 +49,13 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                     'key': i.user_name,
                                     **{
                                         **i.__dict__,
-                                        'update_datetime': f'{i.__dict__["update_datetime"]:%Y-%m-%d %H:%M:%S}',
-                                        'create_datetime': f'{i.__dict__["create_datetime"]:%Y-%m-%d %H:%M:%S}',
+                                        'user_sex_display': t__access('默认') if i.user_sex == '0' else 
+                                                          t__access('男') if i.user_sex == '1' else 
+                                                          t__access('女') if i.user_sex == '2' else 
+                                                          t__access('默认'),
                                     },
-                                    'user_status': {'tag': t__default('启用' if i.user_status else '停用'), 'color': 'cyan' if i.user_status else 'volcano'},
+                                    'user_status': {'tag': t__default('管理员' if i.user_status == 1 else '普通用户'), 
+                                        'color': 'cyan' if i.user_status == 1 else 'blue'},
                                     'operation': [
                                         {
                                             'content': t__access('编辑'),
@@ -107,12 +106,22 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                     ),
                                     fac.AntdFlex(
                                         [
-                                            fac.AntdFormItem(fac.AntdSwitch(id='user-mgmt-add-user-status'), label=t__access('用户状态'), required=True, style={'flex': 1}),
+                                            fac.AntdFormItem(
+                                                fac.AntdSwitch(id='user-mgmt-add-user-status'),
+                                                label=t__access('设为管理员'),
+                                                tooltip=t__access('启用后将在管理员表中添加该用户'),
+                                                required=True,
+                                                style={'flex': 1}
+                                            ),
                                             fac.AntdFormItem(
                                                 fac.AntdSelect(
                                                     id='user-mgmt-add-user-sex',
-                                                    options=[{'label': t__access(i.value), 'value': i.value} for i in Sex],
-                                                    defaultValue='男',
+                                                    options=[
+                                                        {'label': t__access('默认'), 'value': '0'},
+                                                        {'label': t__access('男'), 'value': '1'},
+                                                        {'label': t__access('女'), 'value': '2'}
+                                                    ],
+                                                    defaultValue='0',
                                                     allowClear=False,
                                                 ),
                                                 label=t__access('性别'),
@@ -184,12 +193,22 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                     ),
                                     fac.AntdFlex(
                                         [
-                                            fac.AntdFormItem(fac.AntdSwitch(id='user-mgmt-update-user-status'), label=t__access('用户状态'), required=True, style={'flex': 1}),
+                                            fac.AntdFormItem(
+                                                fac.AntdSwitch(id='user-mgmt-update-user-status'),
+                                                label=t__access('设为管理员'),
+                                                tooltip=t__access('启用后将在管理员表中添加该用户，禁用则从管理员表移除'),
+                                                required=True,
+                                                style={'flex': 1}
+                                            ),
                                             fac.AntdFormItem(
                                                 fac.AntdSelect(
                                                     id='user-mgmt-update-user-sex',
-                                                    options=[{'label': t__access(i.value), 'value': i.value} for i in Sex],
-                                                    defaultValue='男',
+                                                    options=[
+                                                        {'label': t__access('默认'), 'value': '0'},
+                                                        {'label': t__access('男'), 'value': '1'},
+                                                        {'label': t__access('女'), 'value': '2'}
+                                                    ],
+                                                    defaultValue='0',
                                                     allowClear=False,
                                                 ),
                                                 label=t__access('性别'),

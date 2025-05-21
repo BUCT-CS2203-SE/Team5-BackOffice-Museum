@@ -259,11 +259,16 @@ def get_user_info(user_names: Optional[List[str]] = None, exclude_role_admin=Fal
             MyUser.gender.alias('user_sex'),
             MyUser.email.alias('user_email'),
             MyUser.phone.alias('phone_number'),
-            MyUser.spare.alias('user_remark')
+            MyUser.spare.alias('user_remark'),
+            Admin.admin_id  # 添加 admin_id 字段，用于判断是否为管理员
         )
         .join(Admin, JOIN.LEFT_OUTER, on=(MyUser.user_id == Admin.user_id))
-
     )
+    
+    # 添加用户名筛选
+    if user_names:
+        query = query.where(MyUser.nickname.in_(user_names))
+    
     user_infos = []
     curr_time = datetime.now()
     for user in query.dicts():
@@ -273,8 +278,8 @@ def get_user_info(user_names: Optional[List[str]] = None, exclude_role_admin=Fal
         except:
             user_roles = []
             
-        # 确定用户状态 - 如果存在于Admin表中则为启用
-        user_status = Status.ENABLE if 'user_id' in user else Status.DISABLE
+        # 确定用户状态 - 根据 admin_id 是否为 None 判断
+        user_status = Status.ENABLE if user.get('admin_id') is not None else Status.DISABLE
         
         # 创建UserInfo对象
         user_info = UserInfo(
@@ -330,19 +335,22 @@ def update_user(user_name, user_full_name, password, user_status: bool, user_sex
             user.save()
             
             # 更新管理员状态
-            if user_status == Status.ENABLE:
-                # 确保用户是管理员
+            admin_exists = Admin.select().where(Admin.user_id == user.user_id).exists()
+            
+            if user_status and not admin_exists:
+                # 需要添加为管理员
                 try:
-                    Admin.get(Admin.user_id == user.user_id)
-                except DoesNotExist:
-                    # 如果不是管理员，添加到管理员表
                     Admin.create(
                         user_id=user.user_id,
-                        admin_nick_name=user.nickname
+                        admin_nick_name=user_full_name
                     )
-            else:
-                # 如果禁用，删除管理员记录
-                Admin.delete().where(Admin.user_id == user.user_id).execute()
+                    logger.info(f"用户 {user_name} 已添加到管理员表，user_id={user.user_id}")
+                except Exception as e:
+                    logger.error(f"添加用户 {user_name} 到管理员表时出错: {e}")
+            elif not user_status and admin_exists:
+                # 需要从管理员表移除
+                deleted_count = Admin.delete().where(Admin.user_id == user.user_id).execute()
+                logger.info(f"已从管理员表移除用户 {user_name}，删除记录数: {deleted_count}")
                 
             # 只记录日志，模拟更新角色
             if user_roles:
@@ -359,7 +367,6 @@ def update_user(user_name, user_full_name, password, user_status: bool, user_sex
         else:
             txn.commit()
             return True
-
 
 def update_user_full_name(user_name: str, user_full_name: str) -> bool:
     """更新用户全名"""
@@ -578,11 +585,17 @@ def create_user(
             )
             
             # 如果需要设置为管理员
-            if user_status == Status.ENABLE:
-                Admin.create(
-                    user_id=new_user.user_id,
-                    admin_nick_name=new_user.nickname
-                )
+            if user_status:
+                try:
+                    Admin.create(
+                        user_id=new_user.user_id,
+                        admin_nick_name=user_name
+                    )
+                    logger.info(f"用户 {user_name} 已添加到管理员表，user_id={new_user.user_id}")
+                except Exception as e:
+                    logger.error(f"添加用户 {user_name} 到管理员表时出错: {e}")
+                    txn.rollback()
+                    return False
                 
             # 不再尝试添加用户角色到 SysUserRole 表
             # 只记录日志，模拟成功添加角色
