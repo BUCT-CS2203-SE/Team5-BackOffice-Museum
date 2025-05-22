@@ -160,6 +160,22 @@ def render_content(menu_access: MenuAccess, **kwargs):
                     ),
                     fuc.FefferyGridItem(
                         chart_block(
+                            title='文物审核信息图示',
+                            chart=fact.AntdPie(
+                                data=[
+                                    {'status':'已通过','x':x},
+                                    {'status':'待审核','x':y},
+                                    {'status':'已驳回','x':z},
+                                ],
+                                colorField='status',
+                                angleField='x',
+                                radius=0.9,
+                            ),
+                        ),
+                        key='文物审核情况图',
+                    ),
+                    fuc.FefferyGridItem(
+                        chart_block(
                             title='评论状态分布',
                             chart=fact.AntdPie(
                                 data=[
@@ -253,6 +269,7 @@ def render_content(menu_access: MenuAccess, **kwargs):
                     #dict(i='柱状图', x=2, y=0, w=1, h=2),
                     #dict(i='条形图', x=0, y=1, w=1, h=2),
                     dict(i='评论状态分布', x=1, y=1, w=1, h=2),
+                    dict(i='文物审核信息图示', x=1, y=1, w=1, h=2),
                     #dict(i='双轴图', x=2, y=1, w=1, h=2),
                     #dict(i='迷你面积图', x=0, y=2, w=1, h=1),
                     #dict(i='进度条图', x=1, y=2, w=1, h=1),
