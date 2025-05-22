@@ -15,12 +15,12 @@ def render_aside_content(menu_access: MenuAccess):
                         fac.AntdImage(
                             width=40,
                             height=40,
-                            src=get_asset_url('imgs/logo.png'),
+                            src=get_asset_url('imgs/cs2203.png'),
                             preview=False,
                         ),
                         fac.AntdText(
                             ShowConf.APP_NAME,
-                            id='logo-text',
+                            id='app-name',
                             ellipsis=True,
                             className={
                                 'fontSize': '20px',

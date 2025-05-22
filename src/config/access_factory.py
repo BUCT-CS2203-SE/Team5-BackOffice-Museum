@@ -1,8 +1,8 @@
 # 本应用的权限工厂，此处手动导入应用模块 - 内置应用，请勿修改
-from dash_view.application.access_ import role_mgmt, user_mgmt, group_auth, group_mgmt
+from dash_view.application.access_ import role_mgmt, user_mgmt,app_mgmt
 from dash_view.application.dashboard_ import workbench, monitor
 from dash_view.application.person_ import personal_info
-from dash_view.application.message_ import announcement, comment
+from dash_view.application.message_ import announcement, post_comment, post_info
 from dash_view.application.task_ import task_mgmt, task_log
 from dash_view.application.setting_ import notify_api, listen_api
 
@@ -23,12 +23,13 @@ class AccessFactory:
     views = [
         role_mgmt,
         user_mgmt,
-        group_auth,
-        group_mgmt,
+        app_mgmt,
         workbench,
         monitor,
         personal_info,
         announcement,
+        post_comment,
+        post_info,
         antique_order,
         comment,
         task_mgmt,
@@ -55,16 +56,17 @@ class AccessFactory:
     )
 
     # 团队管理员默认权限
-    group_access_meta = ('团队授权-页面',)
+    group_access_meta = ('用户管理-页面',)
 
     # 系统管理员默认权限
     admin_access_meta = (
         '用户管理-页面',
         '角色管理-页面',
-        '团队管理-页面',
+        'APP用户管理-页面',
         '公告管理-页面',
         '文物管理-页面',
         '评论管理-页面',
+        '帖子管理-页面',
         '任务管理-页面',
         '任务日志-页面',
         '通知接口-页面',
