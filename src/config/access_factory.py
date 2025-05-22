@@ -5,7 +5,7 @@ from dash_view.application.person_ import personal_info
 from dash_view.application.message_ import announcement, post_comment, post_info,antique_order  
 from dash_view.application.task_ import task_mgmt, task_log
 from dash_view.application.setting_ import notify_api, listen_api
-
+from dash_view.application.task_ import db_backup_mgmt
 ################## 【开始】此处导入您的应用 ###################
 from dash_view.application.example_app import subapp1, subapp2
 
@@ -34,6 +34,7 @@ class AccessFactory:
         task_mgmt,
         task_log,
         notify_api,
+        db_backup_mgmt,
         listen_api,
         *apps,
     ]
@@ -61,7 +62,6 @@ class AccessFactory:
     admin_access_meta = (
         '用户管理-页面',
         'APP用户管理-页面',
-        '公告管理-页面',
         '文物管理-页面',
         '评论管理-页面',
         '帖子管理-页面',
@@ -69,12 +69,14 @@ class AccessFactory:
         '任务日志-页面',
         '通知接口-页面',
         '监听接口-页面',
+        '数据库备份与恢复-页面',
     )
 
     # 内置可以分配的权限
     assignable_access_meta = (
         '任务管理-页面',
         '任务日志-页面',
+        '数据库备份与恢复-页面', # <--- 新增此行
     )
 
     # 检查数据库和应用权限
