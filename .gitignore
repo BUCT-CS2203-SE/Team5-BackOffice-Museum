@@ -167,3 +167,6 @@ app.db
 apscheduler.db
 src/config/dashgo.ini
 
+frt.py
+frontend_architecture_zh_msyh.png
+frontend_architecture_zh.png

@@ -116,4 +116,8 @@
 ## 四、各模块截图介绍
 
 
-
+![文物管理系统](image.png)
+![帖子管理](image-1.png)
+![评论管理](image-2.png)
+![后台用户管理](image-3.png)
+![APP用户管理](image-4.png)

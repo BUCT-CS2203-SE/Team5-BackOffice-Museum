@@ -60,7 +60,6 @@ class AccessFactory:
     # 系统管理员默认权限
     admin_access_meta = (
         '用户管理-页面',
-        '角色管理-页面',
         'APP用户管理-页面',
         '公告管理-页面',
         '文物管理-页面',

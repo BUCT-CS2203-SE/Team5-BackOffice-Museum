@@ -5,6 +5,7 @@ from dash_components import Card, Table
 from database.sql_db.dao import dao_user
 from config.enums import Sex
 import dash_callback.application.access_.app_mgmt_c  # noqa
+from dash_callback.application.access_.app_mgmt_c import update_table_data  # 添加这一行导入
 from i18n import t__access, t__default
 import feffery_utils_components as fuc
 
@@ -36,39 +37,11 @@ def render_content(menu_access: MenuAccess, **kwargs):
                             columns=[
                                 {'title': t__access('账号'), 'dataIndex': 'user_name'},
                                 {'title': t__access('邮箱'), 'dataIndex': 'user_email'},
-                                {'title': t__access('是否封禁'), 'dataIndex': 'user_status', 'renderOptions': {'renderType': 'tags'}},
-                                {'title': t__access('管理员'), 'dataIndex': 'is_admin', 'renderOptions': {'renderType': 'tags'}},
+                                {'title': t__access('用户状态'), 'dataIndex': 'user_status', 'renderOptions': {'renderType': 'tags'}},
+                                {'title': t__access('管理员状态'), 'dataIndex': 'is_admin', 'renderOptions': {'renderType': 'tags'}},
                                 {'title': t__default('操作'), 'dataIndex': 'operation', 'renderOptions': {'renderType': 'button'}},
                             ],
-                            data=[
-                                {
-                                    'key': i.account,
-                                    'user_name': i.account,
-                                    'user_email': i.email,
-                                    'user_status': {'tag': t__default('启用' if not i.is_frozen else '停用'), 'color': 'cyan' if not i.is_frozen else 'volcano'},
-                                    'is_admin': {'tag': t__default('是' if i.is_admin == 1 else '否'), 'color': 'green' if i.is_admin == 1 else 'default'},
-                                    'operation': [
-                                        {
-                                            'content': t__default('编辑'),
-                                            'type': 'primary',
-                                            'custom': 'update:' + i.account,
-                                        },
-                                        *(
-                                            [
-                                                {
-                                                    'content': t__default('删除'),
-                                                    'type': 'primary',
-                                                    'custom': 'delete:' + i.account,
-                                                    'danger': True,
-                                                }
-                                            ]
-                                            if i.is_admin != 1
-                                            else []
-                                        ),
-                                    ],
-                                }
-                                for i in dao_user.get_app_user_info(exclude_frozen=False)
-                            ],
+                            data=update_table_data(),  # 使用通用函数获取数据
                             pageSize=10,
                         ),
                         style={'width': '100%'},
@@ -173,7 +146,15 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                         [
                                             fac.AntdFormItem(
                                                 fac.AntdSwitch(id='app-user-mgmt-update-user-status'),
-                                                label=t__access('用户状态'),
+                                                label=t__access('启用用户'),
+                                                tooltip=t__access('启用/禁用用户登录权限'),
+                                                required=True,
+                                                style={'flex': 1}
+                                            ),
+                                            fac.AntdFormItem(
+                                                fac.AntdSwitch(id='app-user-mgmt-update-is-admin'),
+                                                label=t__access('设为管理员'),
+                                                tooltip=t__access('授予用户管理员权限'),
                                                 required=True,
                                                 style={'flex': 1}
                                             ),
