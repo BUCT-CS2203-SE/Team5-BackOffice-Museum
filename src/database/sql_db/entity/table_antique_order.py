@@ -19,6 +19,5 @@ class SysAntique(BaseModel):
     Title=CharField()
     ImgUrl=CharField()
     ImgPath=CharField()
-    spare_id = IntegerField(default=-1)  # -1: 待审核, 0: 已驳回, 1: 已通过
     class Meta:
         table_name = 'art'
