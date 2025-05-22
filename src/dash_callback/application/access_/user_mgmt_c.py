@@ -202,7 +202,23 @@ def update_table_data():
             'user_status': {'tag': t__default('管理员' if i.user_status == 1 else '普通用户'), 
                            'color': 'cyan' if i.user_status == 1 else 'blue'},
             'operation': [
-                # 其余代码保持不变
+                {
+                    'content': t__access('编辑'),
+                    'type': 'primary',
+                    'custom': 'update:' + i.user_name,
+                },
+                *(
+                    [
+                        {
+                            'content': t__access('删除'),
+                            'type': 'primary',
+                            'custom': 'delete:' + i.user_name,
+                            'danger': True,
+                        }
+                    ]
+                    if i.user_name != 'admin'
+                    else []
+                ),
             ],
         }
         for i in dao_user.get_user_info(exclude_disabled=False)
