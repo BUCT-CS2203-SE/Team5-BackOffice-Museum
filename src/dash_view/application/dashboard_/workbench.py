@@ -15,6 +15,12 @@ from database.sql_db.dao import dao_announcement
 from database.sql_db.dao.dao_post_comment import get_daily_comment_counts
 
 stats = dao_post_comment.get_comment_status_stats()
+
+antique_stats = {
+    '已通过': 65,
+    '待审核': 23,
+    '已驳回': 12
+}
 # 二级菜单的标题、图标和显示顺序
 title = '工作台'
 icon = None
@@ -163,9 +169,9 @@ def render_content(menu_access: MenuAccess, **kwargs):
                             title='文物审核信息图示',
                             chart=fact.AntdPie(
                                 data=[
-                                    {'status':'已通过','x':x},
-                                    {'status':'待审核','x':y},
-                                    {'status':'已驳回','x':z},
+                                    {'status': '已通过', 'x': antique_stats['已通过']},
+                                    {'status': '待审核', 'x': antique_stats['待审核']},
+                                    {'status': '已驳回', 'x': antique_stats['已驳回']},
                                 ],
                                 colorField='status',
                                 angleField='x',

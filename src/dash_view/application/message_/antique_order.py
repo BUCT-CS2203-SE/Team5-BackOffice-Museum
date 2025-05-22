@@ -7,8 +7,8 @@ from dash_components import Card
 import dash_callback.application.message_.antique_order_c  # noqa: F401
 from i18n import t__notification, translator
 
-from src.database.sql_db.dao.dao_antique_order import Antique
-from src.database.sql_db.entity.table_antique_order import SysAntique
+from database.sql_db.dao.dao_antique_order import Antique
+from database.sql_db.entity.table_antique_order import SysAntique
 
 # 二级菜单的标题、图标和显示顺序
 title = '文物管理'

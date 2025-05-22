@@ -2,7 +2,7 @@
 from dash_view.application.access_ import role_mgmt, user_mgmt,app_mgmt
 from dash_view.application.dashboard_ import workbench, monitor
 from dash_view.application.person_ import personal_info
-from dash_view.application.message_ import announcement, post_comment, post_info
+from dash_view.application.message_ import announcement, post_comment, post_info,antique_order  
 from dash_view.application.task_ import task_mgmt, task_log
 from dash_view.application.setting_ import notify_api, listen_api
 
@@ -31,7 +31,6 @@ class AccessFactory:
         post_comment,
         post_info,
         antique_order,
-        comment,
         task_mgmt,
         task_log,
         notify_api,
