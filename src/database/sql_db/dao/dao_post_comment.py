@@ -155,6 +155,7 @@ def get_daily_comment_counts(days: int = 10):
         for date in date_range
     ]
 
+
 def get_comment_status_stats():
     """获取评论状态统计（包含总和）"""
     query = (
