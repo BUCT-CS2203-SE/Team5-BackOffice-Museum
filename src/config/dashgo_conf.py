@@ -57,8 +57,8 @@ class FlaskConf(metaclass=BaseMetaConf):
 
 
 class ShowConf(metaclass=BaseMetaConf):
-    WEB_TITLE: str
-    APP_NAME: str
+    WEB_TITLE: str = "海外文物管理系统"
+    APP_NAME: str = "海外文物管理系统"
 
 
 class JwtConf(metaclass=BaseMetaConf):
