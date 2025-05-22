@@ -103,18 +103,6 @@ def get_comment_rejected() -> List[PostComment]:
         )
     return comments
 
-def get_comment_status_stats():
-    """获取评论状态统计（包含总和）"""
-    pending = SysPostComment.select().where(SysPostComment.status == -1).count()
-    approved = SysPostComment.select().where(SysPostComment.status == 1).count()
-    rejected = SysPostComment.select().where(SysPostComment.status == 0).count()
-    
-    return {
-        '待审核': pending,
-        '已通过': approved,
-        '已驳回': rejected,
-        '总计': pending + approved + rejected
-    }
 
 def batch_pass_comments(ids: List[str]) -> bool:
     """批量通过评论"""
@@ -131,7 +119,8 @@ def batch_reject_comments(ids: List[str]) -> bool:
         return True
     except Exception:
         return False
-    
+
+
 def get_daily_comment_counts(days: int = 10):
     """获取最近N天的每日评论数量"""
     today = datetime.now().date()
@@ -139,23 +128,50 @@ def get_daily_comment_counts(days: int = 10):
         (today - timedelta(days=days-1-i)).strftime('%Y-%m-%d') 
         for i in range(days)
     ]
+    date_expr = fn.date_format(
+        fn.FROM_UNIXTIME(SysPostComment.create_timestamp/1000), 
+        '%Y-%m-%d'
+    ).alias('date')
+    
     query = (
         SysPostComment.select(
-            fn.DATE(SysPostComment.create_timestamp).alias('date'),
+            date_expr,
             fn.COUNT(SysPostComment.comment_id).alias('count')
         )
         .where(
-            fn.DATE(SysPostComment.create_timestamp).between(
-                today - timedelta(days=days),
-                today
+            fn.FROM_UNIXTIME(SysPostComment.create_timestamp/1000).between(
+                (today - timedelta(days=days)).strftime('%Y-%m-%d'),
+                (today + timedelta(days=1)).strftime('%Y-%m-%d')
             )
         )
-        .group_by(fn.DATE(SysPostComment.create_timestamp))
-        .order_by(fn.DATE(SysPostComment.create_timestamp))
+        .group_by(date_expr)
+        .order_by(date_expr)
     )
+
     result = {r['date']: r['count'] for r in query.dicts()}
     
     return [
         {'date': date, 'count': result.get(date, 0)}
         for date in date_range
     ]
+
+def get_comment_status_stats():
+    """获取评论状态统计（包含总和）"""
+    query = (
+        SysPostComment.select(
+            SysPostComment.status,
+            fn.COUNT(SysPostComment.comment_id).alias('count')
+        )
+        .group_by(SysPostComment.status)
+    )
+    
+    stats = {-1: 0, 0: 0, 1: 0}  
+    for item in query.dicts():
+        stats[item['status']] = item['count']
+    
+    return {
+        '待审核': stats[-1],
+        '已通过': stats[1],
+        '已驳回': stats[0],
+        '总计': sum(stats.values())
+    }
