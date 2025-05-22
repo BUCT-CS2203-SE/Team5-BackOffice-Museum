@@ -48,6 +48,29 @@ def render_content(menu_access: MenuAccess, **kwargs):
                         ),
                     ]
                 ),
+                fac.AntdSpace(
+                    [
+                    fac.AntdButton(
+                        id='antique-button-add',
+                        children=t__notification('新增文物'),
+                        type='primary',
+                        icon=fac.AntdIcon(icon='antd-plus'),
+                    ),
+                    fac.AntdPopconfirm(
+                        fac.AntdButton(
+                            t__notification('删除选中'),
+                            type='primary',
+                            danger=True,
+                            icon=fac.AntdIcon(icon='antd-close'),
+                        ),
+                        id='antique-button-reject',
+                        title=t__notification('确认删除选中行吗？'),
+                        locale=translator.get_current_locale(),
+                    )
+                ]
+                ),
+
+
                 Card(
                     html.Div(
                         id='antique-table-container',
@@ -62,4 +85,5 @@ def render_content(menu_access: MenuAccess, **kwargs):
                 'width': '100%',
             },
         ),
+
     ]
