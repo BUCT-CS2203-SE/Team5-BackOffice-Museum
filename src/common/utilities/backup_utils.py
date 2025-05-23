@@ -15,7 +15,7 @@ DB_PASSWORD = 'Cs22032025' # WARNING: Hardcoding passwords is a security risk!
 DB_NAME = 'se2025'
 
 # Backup Configuration
-BACKUP_DIR = r'c:\Users\WPP_JKW\Team5-BackOffice-Museum\src\db_backups'
+BACKUP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'db_backups')
 BACKUP_FILE_PREFIX = f'backup_{DB_NAME}_' # Using DB_NAME in prefix
 BACKUP_FILE_SUFFIX = '.sql' # MySQL dumps are typically .sql files
 
