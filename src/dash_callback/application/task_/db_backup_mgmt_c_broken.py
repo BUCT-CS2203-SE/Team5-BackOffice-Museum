@@ -39,57 +39,75 @@ def format_file_size(size_bytes):
         return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
 
 # 获取并格式化备份文件数据
-def get_formatted_backup_data():
-    try:
+def get_formatted_backup_data():    try:
         files, msg = backup_utils.list_backup_files()
         print(f"获取备份文件: {len(files) if files else 0} 个文件, 消息: {msg}")
         
         if not files:
+            print("没有找到备份文件")
             return []
         
-        data = []
+        print(f"开始处理 {len(files)} 个备份文件...")
+          data = []
         for f_info in files:
-            # 备份类型标签
-            backup_type = str(f_info.get('backup_type', 'unknown'))
+            # 严格确保所有字段都是字符串类型，避免前端JavaScript错误
+            filename_safe = str(f_info.get('filename', '')).strip()
+            if not filename_safe:
+                continue  # 跳过无效文件名
+            
+            # 备份类型标签 - 确保是字符串
+            backup_type = str(f_info.get('backup_type', 'unknown')).strip()
             
             # 状态标签 - 使用简单字符串避免组件问题
             success = f_info.get('success', True)
             status_text = '成功' if success else '失败'
-              # 为每个文件创建多个操作按钮 - 简化按钮配置
-            filename_safe = str(f_info.get('filename', '')).strip()
+            
+            # 创建时间 - 确保是字符串格式
+            created_at = str(f_info.get('created_at', '')).strip()
+            if not created_at:
+                created_at = '未知时间'
+            
+            # 文件大小 - 确保是数字类型
+            try:
+                file_size = int(f_info.get('size', 0))
+            except (ValueError, TypeError):
+                file_size = 0
+            
+            # 为每个文件创建多个操作按钮 - 使用简单的字符串按钮避免组件错误
             operation_buttons = [
                 {
                     'content': '预览',
                     'type': 'default',
-                    'custom': f"preview-{filename_safe}"
+                    'custom': f"preview:{filename_safe}"
                 },
                 {
                     'content': '下载',
                     'type': 'default',
-                    'custom': f"download-{filename_safe}"
+                    'custom': f"download:{filename_safe}"
                 },
                 {
                     'content': '恢复',
                     'type': 'primary',
-                    'custom': f"restore-{filename_safe}"
+                    'custom': f"restore:{filename_safe}"
                 },
                 {
                     'content': '删除',
                     'type': 'primary',
                     'danger': True,
-                    'custom': f"delete-{filename_safe}"
+                    'custom': f"delete:{filename_safe}"
                 }
             ]
             
+            # 确保所有字段都是预期的数据类型
             data.append({
-                'key': filename_safe,
-                'filename': filename_safe,
-                'size': f_info['size'],
-                'size_formatted': format_file_size(f_info['size']),
-                'created_at': f_info['created_at'],
-                'backup_type': backup_type,
-                'status': status_text,
-                'operation': operation_buttons
+                'key': filename_safe,                              # 字符串
+                'filename': filename_safe,                         # 字符串
+                'size': file_size,                                # 数字
+                'size_formatted': format_file_size(file_size),     # 字符串
+                'created_at': created_at,                         # 字符串
+                'backup_type': backup_type,                       # 字符串
+                'status': status_text,                            # 字符串
+                'operation': operation_buttons                    # 数组
             })
         return data
     except Exception as e:
@@ -170,77 +188,72 @@ def show_message(message_data):
             MessageManager.error(content=message_data['message'])
     return no_update
 
-# 处理表格操作按钮点击
+# 处理表格按钮点击事件
 @app.callback(
-    [Output('db-backup-files-table', 'data', allow_duplicate=True),
-     Output('db-backup-message-trigger', 'data', allow_duplicate=True),
-     Output('backup-file-download', 'data', allow_duplicate=True)],
-    [Input('db-backup-files-table', 'clickedCustom')],
+    [Output('db-backup-message-trigger', 'data', allow_duplicate=True),
+     Output('db-backup-files-table', 'data', allow_duplicate=True)],
+    [Input('db-backup-files-table', 'nClicksButton')],
+    [State('db-backup-files-table', 'clickedCustom')],
     prevent_initial_call=True
 )
-def handle_table_operations(clicked_custom):
-    print(f"=== 表格操作按钮点击 === clicked_custom: {clicked_custom}")
+def handle_table_button_click(nClicks, clicked_custom):
+    print(f"=== 表格按钮点击 === nClicks: {nClicks}, custom: {clicked_custom}")
     
-    if not clicked_custom:
-        return no_update, no_update, no_update
+    if not nClicks or not clicked_custom:
+        return no_update, no_update
     
     try:
-        # 解析操作和文件名
-        parts = clicked_custom.split('-', 1)
-        if len(parts) != 2:
-            return no_update, {'type': 'error', 'message': '无效的操作格式'}, no_update
+        # 解析点击的按钮类型和文件名
+        action, filename = clicked_custom.split(':', 1)
+        print(f"操作: {action}, 文件: {filename}")
         
-        operation, filename = parts
-        print(f"操作: {operation}, 文件名: {filename}")
-        
-        if operation == "preview":
-            # 预览操作 - 显示文件信息
-            message = f"预览文件: {filename}"
-            return no_update, {'type': 'success', 'message': message}, no_update
-            
-        elif operation == "download":
-            # 下载操作 - 触发浏览器下载
+        if action == 'preview':
+            # 预览文件信息
             try:
-                file_path = backup_utils.get_backup_file_path(filename)
-                if file_path and os.path.exists(file_path):
-                    download_data = dcc.send_file(file_path, filename=filename)
-                    return no_update, {'type': 'success', 'message': f'开始下载: {filename}'}, download_data
+                file_info = backup_utils.get_backup_info(filename)
+                if file_info:
+                    preview_msg = f"文件: {filename}\n大小: {format_file_size(file_info.get('size', 0))}\n创建时间: {file_info.get('created_at', 'N/A')}\n类型: {file_info.get('backup_type', 'N/A')}"
+                    return {'type': 'success', 'message': preview_msg}, no_update
                 else:
-                    return no_update, {'type': 'error', 'message': f'文件不存在: {filename}'}, no_update
+                    return {'type': 'error', 'message': f'无法获取文件 {filename} 的信息'}, no_update
             except Exception as e:
-                return no_update, {'type': 'error', 'message': f'下载失败: {str(e)}'}, no_update
-            
-        elif operation == "restore":
-            # 恢复操作
-            try:
-                success, msg = backup_utils.perform_restore(filename)
-                if success:
-                    return no_update, {'type': 'success', 'message': f'恢复成功: {msg}'}, no_update
-                else:
-                    return no_update, {'type': 'error', 'message': f'恢复失败: {msg}'}, no_update
-            except Exception as e:
-                return no_update, {'type': 'error', 'message': f'恢复过程中出错: {str(e)}'}, no_update
+                return {'type': 'error', 'message': f'预览失败: {str(e)}'}, no_update
                 
-        elif operation == "delete":
-            # 删除操作
+        elif action == 'download':
+            # 下载文件 - 这里只显示消息，实际下载需要前端处理
+            download_url = f"/download/backup/{filename}"
+            return {'type': 'success', 'message': f'下载链接: {download_url}\n请右键复制链接或点击浏览器下载'}, no_update
+            
+        elif action == 'restore':
+            # 恢复数据库
             try:
-                success, msg = backup_utils.delete_backup_file(filename)
+                result = backup_utils.restore_from_backup(filename)
+                if result:
+                    return {'type': 'success', 'message': f'数据库恢复成功：{result}'}, no_update
+                else:
+                    return {'type': 'error', 'message': f'数据库恢复失败'}, no_update
+            except Exception as e:
+                return {'type': 'error', 'message': f'恢复失败: {str(e)}'}, no_update
+                
+        elif action == 'delete':
+            # 删除备份文件
+            try:
+                success = backup_utils.delete_backup_file(filename)
                 if success:
                     # 刷新表格数据
                     new_data = get_formatted_backup_data()
-                    return new_data, {'type': 'success', 'message': f'删除成功: {msg}'}, no_update
+                    return {'type': 'success', 'message': f'文件 {filename} 删除成功'}, new_data
                 else:
-                    return no_update, {'type': 'error', 'message': f'删除失败: {msg}'}, no_update
+                    return {'type': 'error', 'message': f'删除文件 {filename} 失败'}, no_update
             except Exception as e:
-                return no_update, {'type': 'error', 'message': f'删除过程中出错: {str(e)}'}, no_update
+                return {'type': 'error', 'message': f'删除失败: {str(e)}'}, no_update
         
-        else:
-            return no_update, {'type': 'error', 'message': f'未知操作: {operation}'}, no_update
-            
+        return no_update, no_update
+        
     except Exception as e:
-        error_msg = f"处理表格操作时出错: {str(e)}"
+        error_msg = f"处理按钮点击时发生错误: {str(e)}"
         print(error_msg)
         traceback.print_exc()
-        return no_update, {'type': 'error', 'message': error_msg}, no_update
+        return {'type': 'error', 'message': error_msg}, no_update
 
 print("=== 数据库备份回调模块加载完成 ===")

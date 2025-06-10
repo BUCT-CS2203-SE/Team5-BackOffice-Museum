@@ -323,3 +323,11 @@ def main_page_redirct():
     if request.method == 'GET':
         if request.path == '/':
             return redirect('/dashboard_/workbench')
+
+
+# 导入下载路由
+try:
+    from dash_view import download_routes
+    logger.info("下载路由已加载")
+except ImportError as e:
+    logger.warning(f"下载路由加载失败: {e}")

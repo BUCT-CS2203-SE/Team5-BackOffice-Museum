@@ -33,9 +33,50 @@ def render_content(menu_access: MenuAccess, **kwargs):
                                 icon=fac.AntdIcon(icon='fc-refresh'),
                                 size='large'
                             ),
+                            fac.AntdButton(
+                                t__task('清理旧备份'),
+                                id='db-backup-cleanup-button',
+                                icon=fac.AntdIcon(icon='fc-delete-row'),
+                                danger=True,
+                                size='large'
+                            ),
                         ],
                         size='middle'
                     ),
+                ],
+                style={'marginBottom': '20px'}
+            ),
+
+            # 定时备份管理区域
+            fac.AntdCard(
+                [
+                    fac.AntdTitle(t__task('定时备份管理'), level=4),
+                    fac.AntdSpace(
+                        [
+                            fac.AntdButton(
+                                t__task('启动定时备份'),
+                                id='db-backup-start-scheduler-button',
+                                type='primary',
+                                icon=fac.AntdIcon(icon='fc-start'),
+                                size='large'
+                            ),
+                            fac.AntdButton(
+                                t__task('停止定时备份'),
+                                id='db-backup-stop-scheduler-button',
+                                icon=fac.AntdIcon(icon='fc-stop'),
+                                danger=True,
+                                size='large'
+                            ),
+                            fac.AntdButton(
+                                t__task('配置定时任务'),
+                                id='db-backup-config-scheduler-button',
+                                icon=fac.AntdIcon(icon='fc-settings'),
+                                size='large'
+                            ),
+                        ],
+                        size='middle'
+                    ),
+                    html.Div(id='db-backup-scheduler-status', style={'marginTop': '10px'}),
                 ],
                 style={'marginBottom': '20px'}
             ),
@@ -63,38 +104,91 @@ def render_content(menu_access: MenuAccess, **kwargs):
                 ]
             ),
 
-            # 计划备份说明
-            fac.AntdCard(
-                [
-                    fac.AntdTitle(t__task('计划备份'), level=4),
-                    fac.AntdAlert(
-                        message=t__task('计划备份设置'),
-                        description=t__task('注意：计划备份任务的创建和管理，请前往"任务管理"页面。您可以在那里创建一个新的定时任务，其执行的脚本应调用备份功能。'),
-                        type='info',
-                        showIcon=True
-                    ),
-                ],
-                style={'marginTop': '20px'}
+            # 备份内容预览模态框
+            fac.AntdModal(
+                id='db-backup-preview-modal',
+                title=t__task('备份内容预览'),
+                width='80%',
+                style={'top': '20px'},
+                children=[
+                    fac.AntdSpin(
+                        id='db-backup-preview-spin',
+                        children=[
+                            html.Div(id='db-backup-preview-content')
+                        ]
+                    )
+                ]
             ),
 
-            # 确认对话框 - 修复okDanger参数问题
+            # 定时任务配置模态框
+            fac.AntdModal(
+                id='db-backup-scheduler-config-modal',
+                title=t__task('定时备份配置'),
+                width='70%',
+                okText=t__task('保存配置'),
+                cancelText=t__task('取消'),
+                children=[
+                    html.Div(id='db-backup-scheduler-config-content')
+                ]
+            ),
+
+            # 清理确认模态框
+            fac.AntdModal(
+                id='db-backup-cleanup-confirm-modal',
+                title=t__task('确认清理旧备份'),
+                okText=t__task('确认清理'),
+                cancelText=t__task('取消'),
+                okButtonProps={'danger': True},
+                children=[
+                    fac.AntdAlert(
+                        message=t__task('清理操作'),
+                        description=html.Div([
+                            html.P(t__task("将删除超出保留数量的旧备份文件")),
+                            fac.AntdInputNumber(
+                                id='db-backup-cleanup-keep-count',
+                                placeholder=t__task('保留备份数量'),
+                                value=10,
+                                min=1,
+                                max=100,
+                                style={'width': '200px'}
+                            ),
+                            html.P(t__task("此操作不可恢复，请谨慎操作！"), 
+                                   style={'color': 'orange', 'fontWeight': 'bold', 'marginTop': '10px'})
+                        ]),
+                        type='warning',
+                        showIcon=True
+                    )
+                ]
+            ),
+
+            # 确认对话框
             fac.AntdModal(
                 id='db-backup-restore-confirm-modal',
                 title=t__task('确认恢复数据库'),
                 okText=t__task('确认恢复'),
                 cancelText=t__task('取消'),
-                okButtonProps={'danger': True}  # 使用okButtonProps替代okDanger
+                okButtonProps={'danger': True}
             ),
             fac.AntdModal(
                 id='db-backup-delete-confirm-modal',
                 title=t__task('确认删除备份文件'),
                 okText=t__task('确认删除'),
                 cancelText=t__task('取消'),
-                okButtonProps={'danger': True}  # 使用okButtonProps替代okDanger
+                okButtonProps={'danger': True}
+            ),
+            
+            # 下载组件（全局，用于所有下载）
+            dcc.Download(id='backup-file-download'),
+            
+            # 下载触发按钮（隐藏）
+            html.Button(
+                id='backup-download-trigger',
+                style={'display': 'none'}
             ),
             
             # 初始化触发器和数据存储
             fuc.FefferyTimeout(id='db-backup-init-timeout', delay=100),
+            fuc.FefferyTimeout(id='db-backup-status-timeout', delay=1000),
             dcc.Store(id='db-backup-selected-filename-store', storage_type='memory'),
             dcc.Store(id='db-backup-message-trigger', storage_type='memory'),
         ],

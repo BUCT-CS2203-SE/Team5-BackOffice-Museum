@@ -24,9 +24,7 @@ DB_NAME = SqlDbConf.DATABASE
 BACKUP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'db_backups')
 BACKUP_FILE_PREFIX = f'backup_{DB_NAME}_'
 BACKUP_FILE_SUFFIX = '.sql'
-# 备份压缩文件后缀
 BACKUP_ZIP_SUFFIX = '.zip'
-# 备份元数据文件
 BACKUP_METADATA_SUFFIX = '.json'
 
 # 定时备份任务锁
@@ -43,7 +41,8 @@ def ensure_backup_dir_exists():
             raise
 
 def create_backup_metadata(backup_filename: str, backup_type: str = "manual", 
-                         compressed: bool = False, original_size: int = 0):
+                         file_size: int = 0, success: bool = True, 
+                         error_msg: str = None, compressed: bool = False):
     """创建备份元数据文件"""
     metadata = {
         "filename": backup_filename,
@@ -53,13 +52,16 @@ def create_backup_metadata(backup_filename: str, backup_type: str = "manual",
         "port": DB_PORT,
         "created_at": datetime.datetime.now().isoformat(),
         "compressed": compressed,
-        "original_size": original_size,
-        "file_size": 0
+        "file_size": file_size,
+        "success": success,
+        "error_message": error_msg
     }
     
-    metadata_filename = backup_filename.replace(BACKUP_FILE_SUFFIX, BACKUP_METADATA_SUFFIX)
-    if compressed:
+    # 确定元数据文件名
+    if compressed and backup_filename.endswith(BACKUP_ZIP_SUFFIX):
         metadata_filename = backup_filename.replace(BACKUP_ZIP_SUFFIX, BACKUP_METADATA_SUFFIX)
+    else:
+        metadata_filename = backup_filename.replace(BACKUP_FILE_SUFFIX, BACKUP_METADATA_SUFFIX)
     
     metadata_path = os.path.join(BACKUP_DIR, metadata_filename)
     
@@ -74,9 +76,10 @@ def create_backup_metadata(backup_filename: str, backup_type: str = "manual",
 
 def get_backup_metadata(backup_filename: str):
     """获取备份文件的元数据"""
-    metadata_filename = backup_filename.replace(BACKUP_FILE_SUFFIX, BACKUP_METADATA_SUFFIX)
     if backup_filename.endswith(BACKUP_ZIP_SUFFIX):
         metadata_filename = backup_filename.replace(BACKUP_ZIP_SUFFIX, BACKUP_METADATA_SUFFIX)
+    else:
+        metadata_filename = backup_filename.replace(BACKUP_FILE_SUFFIX, BACKUP_METADATA_SUFFIX)
     
     metadata_path = os.path.join(BACKUP_DIR, metadata_filename)
     
@@ -101,13 +104,13 @@ def compress_backup_file(sql_file_path: str):
         # 删除原始SQL文件
         os.remove(sql_file_path)
         logger.info(f"备份文件已压缩: {zip_file_path}")
-        return zip_file_path
+        return zip_file_path, "压缩成功"
     except Exception as e:
         logger.error(f"压缩备份文件失败: {e}")
-        return None
+        return None, f"压缩失败: {str(e)}"
 
 def extract_backup_file(zip_file_path: str):
-    """解压备份文件"""
+    """解压备份文件到临时目录"""
     extract_dir = tempfile.mkdtemp()
     
     try:
@@ -117,60 +120,16 @@ def extract_backup_file(zip_file_path: str):
         # 查找SQL文件
         sql_files = glob.glob(os.path.join(extract_dir, "*.sql"))
         if sql_files:
-            return sql_files[0]
+            return sql_files[0], "解压成功"
         else:
-            raise Exception("压缩文件中没有找到SQL文件")
+            return None, "压缩文件中没有找到SQL文件"
     except Exception as e:
         logger.error(f"解压备份文件失败: {e}")
-        return None
+        return None, f"解压失败: {str(e)}"
 
-def get_backup_preview(backup_filename: str, lines: int = 50):
-    """获取备份文件预览内容"""
-    backup_file_path = os.path.join(BACKUP_DIR, backup_filename)
-    
-    if not os.path.exists(backup_file_path):
-        return None, "备份文件不存在"
-    
-    try:
-        # 处理压缩文件
-        if backup_filename.endswith(BACKUP_ZIP_SUFFIX):
-            sql_file_path = extract_backup_file(backup_file_path)
-            if not sql_file_path:
-                return None, "无法解压备份文件"
-            
-            try:
-                with open(sql_file_path, 'r', encoding='utf-8') as f:
-                    preview_lines = []
-                    for i, line in enumerate(f):
-                        if i >= lines:
-                            break
-                        preview_lines.append(line.strip())
-                return preview_lines, "预览成功"
-            finally:
-                # 清理临时文件
-                try:
-                    os.remove(sql_file_path)
-                    os.rmdir(os.path.dirname(sql_file_path))
-                except:
-                    pass
-        else:
-            # 处理未压缩的SQL文件
-            with open(backup_file_path, 'r', encoding='utf-8') as f:
-                preview_lines = []
-                for i, line in enumerate(f):
-                    if i >= lines:
-                        break
-                    preview_lines.append(line.strip())
-            return preview_lines, "预览成功"
-            
-    except Exception as e:
-        logger.error(f"获取备份文件预览失败: {e}")
-        return None, f"预览失败: {str(e)}"
-
-def perform_backup(custom_suffix: str = None, compress=True, backup_type="manual"):
+def perform_backup(custom_suffix: str = None, compress: bool = True, backup_type: str = "manual"):
     """
     执行 MySQL 数据库备份。
-    备份文件名格式: backup_{DB_NAME}_YYYYMMDD_HHMMSS[_custom_suffix].sql
     """
     with _backup_lock:  # 确保同时只有一个备份任务运行
         ensure_backup_dir_exists()
@@ -188,17 +147,17 @@ def perform_backup(custom_suffix: str = None, compress=True, backup_type="manual
             f'--port={str(DB_PORT)}',
             f'--user={DB_USER}',
             f'--password={DB_PASSWORD}',
-            '--single-transaction',    # 推荐用于InnoDB表以确保一致性
-            '--routines',              # 包含存储过程和函数
-            '--triggers',              # 包含触发器
-            '--events',                # 包含事件
-            '--add-drop-database',     # 添加DROP DATABASE语句
-            '--add-drop-table',        # 添加DROP TABLE语句
-            '--create-options',        # 包含所有MySQL特定的表选项
-            '--disable-keys',          # 在INSERT语句前后添加禁用和启用键的语句
-            '--extended-insert',       # 使用多行INSERT语法
-            '--lock-tables=false',     # 不锁定表（与single-transaction配合使用）
-            '--set-charset',           # 添加SET NAMES语句
+            '--single-transaction',
+            '--routines',
+            '--triggers', 
+            '--events',
+            '--add-drop-database',
+            '--add-drop-table',
+            '--create-options',
+            '--disable-keys',
+            '--extended-insert',
+            '--lock-tables=false',
+            '--set-charset',
             DB_NAME
         ]
 
@@ -213,22 +172,27 @@ def perform_backup(custom_suffix: str = None, compress=True, backup_type="manual
                 backup_size = os.path.getsize(backup_file_path)
                 logger.info(f"MySQL 数据库 '{DB_NAME}' 已成功备份到 {backup_file_path}，大小: {backup_size} bytes")
                 
-                # 创建元数据
-                create_backup_metadata(backup_file_name, backup_type, backup_size, success=True)
-                
                 final_path = backup_file_path
+                final_filename = backup_file_name
                 
                 # 是否压缩备份文件
                 if compress:
-                    zip_path, zip_msg = compress_backup(backup_file_path)
+                    zip_path, zip_msg = compress_backup_file(backup_file_path)
                     if zip_path:
                         final_path = zip_path
-                        # 更新元数据中的文件名和大小
-                        zip_filename = os.path.basename(zip_path)
+                        final_filename = os.path.basename(zip_path)
                         zip_size = os.path.getsize(zip_path)
-                        create_backup_metadata(zip_filename.replace(BACKUP_ZIP_SUFFIX, BACKUP_FILE_SUFFIX), 
-                                             backup_type, zip_size, success=True)
+                        
+                        # 创建压缩文件的元数据
+                        create_backup_metadata(final_filename, backup_type, zip_size, True, None, True)
                         logger.info(f"备份文件已压缩: {zip_path}")
+                    else:
+                        # 压缩失败，保留原文件
+                        create_backup_metadata(final_filename, backup_type, backup_size, True, None, False)
+                        logger.warning(f"压缩失败，保留原始备份文件: {zip_msg}")
+                else:
+                    # 不压缩，创建原始文件的元数据
+                    create_backup_metadata(final_filename, backup_type, backup_size, True, None, False)
                 
                 return final_path, "备份成功"
             else:
@@ -236,7 +200,7 @@ def perform_backup(custom_suffix: str = None, compress=True, backup_type="manual
                 logger.error(error_message)
                 
                 # 创建失败的元数据
-                create_backup_metadata(backup_file_name, backup_type, 0, success=False, error_msg=stderr.strip())
+                create_backup_metadata(backup_file_name, backup_type, 0, False, stderr.strip())
                 
                 # 清理失败的备份文件
                 if os.path.exists(backup_file_path):
@@ -250,12 +214,12 @@ def perform_backup(custom_suffix: str = None, compress=True, backup_type="manual
         except FileNotFoundError:
             error_msg = "mysqldump 命令未找到。请确保 MySQL 客户端已安装并在系统 PATH 中。"
             logger.error(error_msg)
-            create_backup_metadata(backup_file_name, backup_type, 0, success=False, error_msg=error_msg)
+            create_backup_metadata(backup_file_name, backup_type, 0, False, error_msg)
             return None, f"备份失败: {error_msg}"
         except Exception as e:
             error_msg = f"MySQL 备份过程中发生意外错误: {e}"
             logger.error(error_msg)
-            create_backup_metadata(backup_file_name, backup_type, 0, success=False, error_msg=str(e))
+            create_backup_metadata(backup_file_name, backup_type, 0, False, str(e))
             if os.path.exists(backup_file_path):
                 try:
                     os.remove(backup_file_path)
@@ -281,12 +245,7 @@ def list_backup_files():
                     filename = os.path.basename(file_path)
                     
                     # 获取备份元数据
-                    if filename.endswith(BACKUP_ZIP_SUFFIX):
-                        metadata_filename = filename.replace(BACKUP_ZIP_SUFFIX, BACKUP_FILE_SUFFIX)
-                    else:
-                        metadata_filename = filename
-                    
-                    metadata = get_backup_metadata(metadata_filename)
+                    metadata = get_backup_metadata(filename)
                     
                     file_info = {
                         'filename': filename,
@@ -296,7 +255,8 @@ def list_backup_files():
                         'is_compressed': filename.endswith(BACKUP_ZIP_SUFFIX),
                         'backup_type': metadata.get('backup_type', 'unknown') if metadata else 'unknown',
                         'success': metadata.get('success', True) if metadata else True,
-                        'database': metadata.get('database', DB_NAME) if metadata else DB_NAME
+                        'database': metadata.get('database_name', DB_NAME) if metadata else DB_NAME,
+                        'error_message': metadata.get('error_message') if metadata else None
                     }
                     backup_files_info.append(file_info)
                 except Exception as e:
@@ -312,7 +272,7 @@ def list_backup_files():
 def perform_restore(backup_filename: str):
     """
     从指定的备份文件恢复 MySQL 数据库。
-    警告：这是一个潜在的破坏性操作！它将用备份文件的内容覆盖当前数据库。
+    警告：这是一个潜在的破坏性操作！
     """
     ensure_backup_dir_exists()
     backup_file_path = os.path.join(BACKUP_DIR, backup_filename)
@@ -327,14 +287,10 @@ def perform_restore(backup_filename: str):
     
     if backup_filename.endswith(BACKUP_ZIP_SUFFIX):
         # 解压缩文件到临时位置
-        temp_dir = tempfile.mkdtemp()
-        try:
-            temp_sql_file, decompress_msg = decompress_backup(backup_file_path, temp_dir)
-            if not temp_sql_file:
-                return False, f"解压缩失败: {decompress_msg}"
-            actual_sql_file = temp_sql_file
-        except Exception as e:
-            return False, f"解压缩过程出错: {str(e)}"
+        temp_sql_file, decompress_msg = extract_backup_file(backup_file_path)
+        if not temp_sql_file:
+            return False, f"解压缩失败: {decompress_msg}"
+        actual_sql_file = temp_sql_file
     
     if os.path.getsize(actual_sql_file) == 0:
         logger.error(f"备份文件 {actual_sql_file} 为空，无法恢复。")
@@ -362,7 +318,7 @@ def perform_restore(backup_filename: str):
         f'--port={str(DB_PORT)}',
         f'--user={DB_USER}',
         f'--password={DB_PASSWORD}',
-        '--default-character-set=utf8mb4',  # 设置字符集
+        '--default-character-set=utf8mb4',
         DB_NAME
     ]
 
@@ -458,8 +414,7 @@ def get_backup_content_preview(backup_filename: str, max_lines=50):
         
         # 如果是压缩文件，先解压
         if backup_filename.endswith(BACKUP_ZIP_SUFFIX):
-            temp_dir = tempfile.mkdtemp()
-            temp_sql_file, decompress_msg = decompress_backup(backup_file_path, temp_dir)
+            temp_sql_file, decompress_msg = extract_backup_file(backup_file_path)
             if not temp_sql_file:
                 return None, f"解压缩失败: {decompress_msg}"
             actual_sql_file = temp_sql_file
@@ -489,6 +444,31 @@ def get_backup_content_preview(backup_filename: str, max_lines=50):
         logger.error(f"读取备份文件内容失败: {e}")
         return None, f"读取失败: {str(e)}"
 
+def cleanup_old_backups(keep_count=10):
+    """清理旧的备份文件，保留最新的指定数量"""
+    try:
+        files, msg = list_backup_files()
+        if not files:
+            return True, "没有备份文件需要清理"
+        
+        if len(files) <= keep_count:
+            return True, f"当前备份文件数量({len(files)})未超过保留数量({keep_count})"
+        
+        # 按时间排序，删除最旧的文件
+        files_to_delete = files[keep_count:]
+        deleted_count = 0
+        
+        for file_info in files_to_delete:
+            success, _ = delete_backup_file(file_info['filename'])
+            if success:
+                deleted_count += 1
+        
+        return True, f"清理完成，删除了 {deleted_count} 个旧备份文件"
+        
+    except Exception as e:
+        logger.error(f"清理旧备份文件失败: {e}")
+        return False, f"清理失败: {str(e)}"
+
 def validate_backup_file(backup_filename: str):
     """验证备份文件的完整性"""
     backup_file_path = os.path.join(BACKUP_DIR, backup_filename)
@@ -502,8 +482,7 @@ def validate_backup_file(backup_filename: str):
         
         # 如果是压缩文件，先解压进行验证
         if backup_filename.endswith(BACKUP_ZIP_SUFFIX):
-            temp_dir = tempfile.mkdtemp()
-            temp_sql_file, decompress_msg = decompress_backup(backup_file_path, temp_dir)
+            temp_sql_file, decompress_msg = extract_backup_file(backup_file_path)
             if not temp_sql_file:
                 return False, f"解压缩失败: {decompress_msg}"
             actual_sql_file = temp_sql_file
@@ -542,65 +521,3 @@ def validate_backup_file(backup_filename: str):
     except Exception as e:
         logger.error(f"验证备份文件失败: {e}")
         return False, f"验证失败: {str(e)}"
-
-def cleanup_old_backups(keep_count=10):
-    """清理旧的备份文件，保留最新的指定数量"""
-    try:
-        files, msg = list_backup_files()
-        if not files:
-            return True, "没有备份文件需要清理"
-        
-        if len(files) <= keep_count:
-            return True, f"当前备份文件数量({len(files)})未超过保留数量({keep_count})"
-        
-        # 按时间排序，删除最旧的文件
-        files_to_delete = files[keep_count:]
-        deleted_count = 0
-        
-        for file_info in files_to_delete:
-            success, _ = delete_backup_file(file_info['filename'])
-            if success:
-                deleted_count += 1
-        
-        return True, f"清理完成，删除了 {deleted_count} 个旧备份文件"
-        
-    except Exception as e:
-        logger.error(f"清理旧备份文件失败: {e}")
-        return False, f"清理失败: {str(e)}"
-
-if __name__ == '__main__':
-    # 测试代码 (需要配置好MySQL连接和客户端工具)
-    # print("确保备份目录存在...")
-    # ensure_backup_dir_exists()
-    
-    # print("尝试备份...")
-    # backup_path, msg = perform_backup("manual_mysql_test")
-    # print(f"备份结果: {msg},路径: {backup_path}")
-
-    # print("列出备份文件...")
-    # files, msg_list = list_backup_files()
-    # print(f"列出结果: {msg_list}")
-    # for f_info in files:
-    #     print(f"  - {f_info['filename']} (大小: {f_info['size']} bytes, 创建于: {f_info['created_at']})")
-
-    # if files:
-    #     test_restore_filename = files[0]['filename']
-    #     print(f"尝试从 {test_restore_filename} 恢复 (这是一个高风险操作，请谨慎测试)...")
-    #     # 注意：恢复测试会覆盖现有数据库！
-    #     # proceed_restore = input(f"确定要从 {test_restore_filename} 恢复数据库 {DB_NAME} 吗? (yes/no): ")
-    #     # if proceed_restore.lower() == 'yes':
-    #     #     success_restore, msg_restore = perform_restore(test_restore_filename)
-    #     #     print(f"恢复结果: {msg_restore}, 状态: {success_restore}")
-    #     # else:
-    #     #     print("恢复操作已取消。")
-
-        # print(f"尝试删除备份文件 {test_restore_filename}...")
-        # success_delete, msg_delete = delete_backup_file(test_restore_filename)
-        # print(f"删除结果: {msg_delete}, 状态: {success_delete}")
-        
-        # print("再次列出备份文件...")
-        # files_after_delete, msg_list_after_delete = list_backup_files()
-        # print(f"列出结果: {msg_list_after_delete}")
-        # for f_info_ad in files_after_delete:
-        #     print(f"  - {f_info_ad['filename']}")
-    pass

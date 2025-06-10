@@ -170,3 +170,8 @@ src/config/dashgo.ini
 frt.py
 frontend_architecture_zh_msyh.png
 frontend_architecture_zh.png
+src/config/backup_schedule.json
+src/db_backups/backup_se2025_20250610_172329_test.json
+src/db_backups/backup_se2025_20250610_172329_test.zip
+src/db_backups/backup_se2025_20250610_181650_manual.json
+src/db_backups/backup_se2025_20250610_181650_manual.zip

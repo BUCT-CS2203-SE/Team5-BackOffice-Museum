@@ -55,29 +55,34 @@ def get_formatted_backup_data():
             # 状态标签 - 使用简单字符串避免组件问题
             success = f_info.get('success', True)
             status_text = '成功' if success else '失败'
-              # 为每个文件创建多个操作按钮 - 简化按钮配置
+            
+            # 为每个文件创建多个操作按钮
             filename_safe = str(f_info.get('filename', '')).strip()
             operation_buttons = [
                 {
                     'content': '预览',
                     'type': 'default',
-                    'custom': f"preview-{filename_safe}"
+                    'icon': fac.AntdIcon(icon='fc-search'),
+                    'custom': f"preview:{filename_safe}"
                 },
                 {
                     'content': '下载',
                     'type': 'default',
-                    'custom': f"download-{filename_safe}"
+                    'icon': fac.AntdIcon(icon='fc-export'),
+                    'custom': f"download:{filename_safe}"
                 },
                 {
                     'content': '恢复',
                     'type': 'primary',
-                    'custom': f"restore-{filename_safe}"
+                    'icon': fac.AntdIcon(icon='fc-download'),
+                    'custom': f"restore:{filename_safe}"
                 },
                 {
                     'content': '删除',
                     'type': 'primary',
                     'danger': True,
-                    'custom': f"delete-{filename_safe}"
+                    'icon': fac.AntdIcon(icon='fc-delete-row'),
+                    'custom': f"delete:{filename_safe}"
                 }
             ]
             
@@ -169,78 +174,5 @@ def show_message(message_data):
         else:
             MessageManager.error(content=message_data['message'])
     return no_update
-
-# 处理表格操作按钮点击
-@app.callback(
-    [Output('db-backup-files-table', 'data', allow_duplicate=True),
-     Output('db-backup-message-trigger', 'data', allow_duplicate=True),
-     Output('backup-file-download', 'data', allow_duplicate=True)],
-    [Input('db-backup-files-table', 'clickedCustom')],
-    prevent_initial_call=True
-)
-def handle_table_operations(clicked_custom):
-    print(f"=== 表格操作按钮点击 === clicked_custom: {clicked_custom}")
-    
-    if not clicked_custom:
-        return no_update, no_update, no_update
-    
-    try:
-        # 解析操作和文件名
-        parts = clicked_custom.split('-', 1)
-        if len(parts) != 2:
-            return no_update, {'type': 'error', 'message': '无效的操作格式'}, no_update
-        
-        operation, filename = parts
-        print(f"操作: {operation}, 文件名: {filename}")
-        
-        if operation == "preview":
-            # 预览操作 - 显示文件信息
-            message = f"预览文件: {filename}"
-            return no_update, {'type': 'success', 'message': message}, no_update
-            
-        elif operation == "download":
-            # 下载操作 - 触发浏览器下载
-            try:
-                file_path = backup_utils.get_backup_file_path(filename)
-                if file_path and os.path.exists(file_path):
-                    download_data = dcc.send_file(file_path, filename=filename)
-                    return no_update, {'type': 'success', 'message': f'开始下载: {filename}'}, download_data
-                else:
-                    return no_update, {'type': 'error', 'message': f'文件不存在: {filename}'}, no_update
-            except Exception as e:
-                return no_update, {'type': 'error', 'message': f'下载失败: {str(e)}'}, no_update
-            
-        elif operation == "restore":
-            # 恢复操作
-            try:
-                success, msg = backup_utils.perform_restore(filename)
-                if success:
-                    return no_update, {'type': 'success', 'message': f'恢复成功: {msg}'}, no_update
-                else:
-                    return no_update, {'type': 'error', 'message': f'恢复失败: {msg}'}, no_update
-            except Exception as e:
-                return no_update, {'type': 'error', 'message': f'恢复过程中出错: {str(e)}'}, no_update
-                
-        elif operation == "delete":
-            # 删除操作
-            try:
-                success, msg = backup_utils.delete_backup_file(filename)
-                if success:
-                    # 刷新表格数据
-                    new_data = get_formatted_backup_data()
-                    return new_data, {'type': 'success', 'message': f'删除成功: {msg}'}, no_update
-                else:
-                    return no_update, {'type': 'error', 'message': f'删除失败: {msg}'}, no_update
-            except Exception as e:
-                return no_update, {'type': 'error', 'message': f'删除过程中出错: {str(e)}'}, no_update
-        
-        else:
-            return no_update, {'type': 'error', 'message': f'未知操作: {operation}'}, no_update
-            
-    except Exception as e:
-        error_msg = f"处理表格操作时出错: {str(e)}"
-        print(error_msg)
-        traceback.print_exc()
-        return no_update, {'type': 'error', 'message': error_msg}, no_update
 
 print("=== 数据库备份回调模块加载完成 ===")
